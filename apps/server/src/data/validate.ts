@@ -2,8 +2,9 @@
  * Data rules for the seed files (spec section 5). Errors block seeding; warnings are printed
  * for the owner to review.
  */
-import { isPosition, MAX_OVERALL, MIN_OVERALL } from '@draft-xi/engine';
+import { computeClubStrengths, isPosition, MAX_OVERALL, MIN_OVERALL } from '@draft-xi/engine';
 import type { Dataset } from './dataset';
+import { datasetToEngine } from './engine';
 
 export const DATA_RULES = {
   expectedPlayerCount: 618,
@@ -29,7 +30,8 @@ export type IssueCode =
   | 'squad-size-mismatch'
   | 'csv-mismatch'
   | 'redundant-alt-position'
-  | 'invalid-color';
+  | 'invalid-color'
+  | 'strength-mismatch';
 
 export interface DataIssue {
   code: IssueCode;
@@ -222,6 +224,7 @@ export function validateDataset(dataset: Dataset, rules: DataRules = DATA_RULES)
   }
 
   warnings.push(...compareCsvWithJson(dataset));
+  if (errors.length === 0) warnings.push(...compareStrengths(dataset));
 
   return {
     ok: errors.length === 0,
@@ -230,6 +233,26 @@ export function validateDataset(dataset: Dataset, rules: DataRules = DATA_RULES)
     warnings,
     clubs: summaries,
   };
+}
+
+/** clubs.json strength_rating should agree with the engine's own calculation. */
+function compareStrengths(dataset: Dataset): DataIssue[] {
+  const engine = datasetToEngine(dataset);
+  const computed = new Map(
+    computeClubStrengths(engine.clubs, engine.players).map((s) => [s.clubName, s.rating]),
+  );
+  return dataset.clubs.flatMap((club): DataIssue[] => {
+    const ours = computed.get(club.name);
+    if (club.strength_rating === undefined || ours === undefined) return [];
+    if (Math.abs(ours - club.strength_rating) < 0.005) return [];
+    return [
+      {
+        code: 'strength-mismatch',
+        club: club.name,
+        message: `${club.name}: clubs.json strength_rating ${club.strength_rating} differs from the computed ${ours} (the computed value is used)`,
+      },
+    ];
+  });
 }
 
 /** players.csv should describe exactly the same players as players.seed.json. */

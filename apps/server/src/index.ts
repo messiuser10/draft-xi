@@ -22,6 +22,8 @@ export * from './db/schema/enums';
 export { DATA_FILES, DatasetFileError, loadDataset } from './data/dataset';
 export type { ClubRecord, CsvPlayerRecord, Dataset, PlayerRecord } from './data/dataset';
 export { DATA_RULES, validateDataset } from './data/validate';
+export { datasetToEngine } from './data/engine';
+export type { EngineData } from './data/engine';
 export type {
   ClubSummary,
   DataIssue,

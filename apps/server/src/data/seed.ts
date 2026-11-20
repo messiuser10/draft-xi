@@ -4,10 +4,11 @@
  * Rows in the database that are no longer in the files are reported, never deleted, because
  * drafts and season history may reference them.
  */
-import type { Position } from '@draft-xi/engine';
+import { computeClubStrengths, type Position } from '@draft-xi/engine';
 import { eq } from 'drizzle-orm';
 import type { DbHandle, PostgresHandle, SqliteHandle } from '../db/client';
 import type { Dataset } from './dataset';
+import { datasetToEngine } from './engine';
 import { DATA_RULES, type DataRules, type ValidationResult, validateDataset } from './validate';
 
 export interface ClubRow {
@@ -128,7 +129,12 @@ function chunks<T>(rows: readonly T[], size = INSERT_CHUNK): T[][] {
   return out;
 }
 
+/** Club rows with strength_rating computed by the engine from each club's full squad. */
 export function clubRowsFromDataset(dataset: Dataset): ClubRow[] {
+  const engine = datasetToEngine(dataset);
+  const strengthByName = new Map(
+    computeClubStrengths(engine.clubs, engine.players).map((s) => [s.clubName, s.rating]),
+  );
   return dataset.clubs.map((c) => ({
     name: c.name,
     shortName: c.short_name,
@@ -136,7 +142,7 @@ export function clubRowsFromDataset(dataset: Dataset): ClubRow[] {
     leagueName: c.league_name,
     primaryColor: c.primary_color,
     secondaryColor: c.secondary_color,
-    strengthRating: c.strength_rating ?? null,
+    strengthRating: strengthByName.get(c.name) ?? null,
   }));
 }
 

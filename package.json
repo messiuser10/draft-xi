@@ -19,6 +19,7 @@
     "check": "npm run typecheck && npm run lint && npm test",
     "seed": "tsx scripts/seed.ts",
     "data:validate": "tsx scripts/validate-data.ts",
+    "sim": "tsx scripts/sim.ts",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:generate": "npm run db:generate -w @draft-xi/server"
   },

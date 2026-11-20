@@ -122,6 +122,17 @@ describe('validateDataset', () => {
   });
 });
 
+describe('strength cross-check', () => {
+  it('only warns when clubs.json strength_rating disagrees with the engine', () => {
+    const base = makeDataset();
+    const clubs = base.clubs.map((c, i) => (i === 0 ? { ...c, strength_rating: 50 } : c));
+    const result = validateDataset({ ...base, clubs }, TEST_RULES);
+    expect(result.ok).toBe(true);
+    expect(result.warnings.map((w) => w.code)).toEqual(['strength-mismatch']);
+    expect(result.warnings[0]?.message).toContain('Alpha FC');
+  });
+});
+
 describe('dataset parsing', () => {
   it('parses players.csv with a BOM, quoted fields and numeric overall', () => {
     const csv = '﻿club,name,position,overall,nationality\nAlpha FC,"Smith, John",ST,88,England\n';

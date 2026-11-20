@@ -119,14 +119,18 @@ describe.each(DIALECTS)('seed on %s', (_dialect, open) => {
         p.name === 'Erling Haaland' ? { ...p, overall: 92, alt_positions: [] } : p,
       ),
     };
+    const cityBefore = (await selectClubs(handle)).find((c) => c.name === 'Manchester City');
     const report = await seedDatabase(handle, edited);
-    expect(report.clubs).toMatchObject({ inserted: 0, updated: 1, unchanged: 19 });
+    // Arsenal's colour changed; Manchester City's strength is recomputed from Haaland's new rating.
+    expect(report.clubs).toMatchObject({ inserted: 0, updated: 2, unchanged: 18 });
     expect(report.players).toMatchObject({ inserted: 0, updated: 1, unchanged: 617 });
 
     const haaland = (await selectPlayers(handle)).find((p) => p.fullName === 'Erling Haaland');
     expect(haaland).toMatchObject({ overall: 92, altPositions: [] });
-    const arsenal = (await selectClubs(handle)).find((c) => c.name === 'Arsenal');
-    expect(arsenal?.secondaryColor).toBe('#9C824A');
+    const clubsAfter = await selectClubs(handle);
+    expect(clubsAfter.find((c) => c.name === 'Arsenal')?.secondaryColor).toBe('#9C824A');
+    const cityAfter = clubsAfter.find((c) => c.name === 'Manchester City');
+    expect(cityAfter!.strengthRating!).toBeCloseTo(cityBefore!.strengthRating! + 1 / 11, 2);
   });
 
   it('reports players missing from the files but never deletes them', async () => {
