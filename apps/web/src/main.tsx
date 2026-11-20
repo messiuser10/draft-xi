@@ -14,6 +14,10 @@ import { LobbyPage } from './pages/Lobby';
 import { LoginPage } from './pages/Login';
 import { NotFoundPage } from './pages/NotFound';
 import { SoloPage } from './pages/Solo';
+import { HallOfFamePage, LeaderboardPage } from './pages/HallOfFame';
+import { ProfilePage } from './pages/Profile';
+import { ResultsPage } from './pages/Results';
+import { TeamPage } from './pages/Team';
 import './styles.css';
 
 const queryClient = new QueryClient({
@@ -34,6 +38,12 @@ const router = createBrowserRouter([
       { path: '/reveal/:code', element: <RevealPage /> },
       { path: '/season/:code', element: <SeasonPage /> },
       { path: '/league/:code', element: <LeaguePage /> },
+      { path: '/results/:code', element: <ResultsPage /> },
+      { path: '/team/:code/:teamId', element: <TeamPage /> },
+      { path: '/profile', element: <ProfilePage /> },
+      { path: '/profile/:userId', element: <ProfilePage /> },
+      { path: '/hall-of-fame', element: <HallOfFamePage /> },
+      { path: '/leaderboard', element: <LeaderboardPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

@@ -77,6 +77,9 @@ export const useConnection = create<{ connected: boolean; clockOffsetMs: number 
 /** Server time now, corrected by the measured clock offset. */
 export const serverNow = (): number => Date.now() + useConnection.getState().clockOffsetMs;
 
+/** New lobby code per finished game, set when its host starts a rematch. */
+export const useRematch = create<Record<string, string>>(() => ({}));
+
 interface GamesState {
   byCode: Record<string, GameSnapshot>;
   errors: Record<string, string>;
@@ -151,6 +154,10 @@ export const useGames = create<GamesState>((set) => ({
           break;
         case 'playback:updated':
           next.playback = event.playback;
+          break;
+        case 'game:rematch':
+          useRematch.setState((r) => ({ ...r, [code]: event.code }));
+          useToasts.getState().push(`Rematch lobby ${event.code} is open`);
           break;
       }
       return { byCode: { ...s.byCode, [code]: next } };

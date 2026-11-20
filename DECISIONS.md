@@ -123,3 +123,17 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - Expected Strength runs 1,000 seasons in the server process on request and caches the result in memory per game.
 - The League Teams page shows the latest season's teams once a season exists; during the draft it builds them from the current picks, with Academy Reserves in empty slots.
 - Table colour bands use fixed defaults (1st, 2nd to 4th, 5th to 6th, 18th to 20th). Renaming or switching them off arrives with the admin settings (M6).
+
+## M5: results and history
+
+- Results are computed when read, from the stored season (stats, lineups, fixtures), so later admin edits to players never change a finished game.
+- Award inputs come from stored stats; cards are not stored per player, so Biggest Flop and Best Draft Steal use average rating only.
+- Draft grades use the team's strength rank within that season's 20 teams and its final position; pick tags compare pick number with the player's rank by overall in the current pool (drafted players who were later removed keep their stored overall).
+- Head to head covers every pair of human teams in the chosen season.
+- Profiles count every season (including Run It Back and multi-season) for titles, average finish and best grade; "games played" counts games that got past the lobby. The profile's game list shows the season 1 finish and grade.
+- The Hall of Fame lists the season 1 champion of each finished game, newest first. The leaderboard ranks users by titles, then average finish, over every season, guests included.
+- Record book: most points in a season, most goals by a player on a drafted team, best goal difference, across every season. Ties go to the earliest.
+- Rematch creates a new lobby with the old settings and every team (name, colour, formation) copied over; humans start not ready, bots keep their level. Players in the old game get a "Join the rematch" button through a `game:rematch` event.
+- Export is host or admin only: JSON (settings, seed, and per season the table, awards, grades and picks) or CSV (final table of every season).
+- The share image is drawn on a canvas in the browser (1080 by 1350 PNG) with the fan game disclaimer; no logos or photos.
+- Pitch slot positions are inset vertically so tokens with stat lines stay inside the pitch.

@@ -120,6 +120,9 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
         <Link to={`/league/${code}`} className="btn-ghost">
           League Teams
         </Link>
+        <Link to={`/results/${code}?season=${data.number}`} className={done ? 'btn-primary' : 'btn-ghost'}>
+          {done ? 'Season results' : 'Results'}
+        </Link>
       </header>
 
       <Controls snapshot={snapshot} playback={playback} />

@@ -29,6 +29,9 @@ interface PitchProps {
   label?: string;
 }
 
+/** Slot y (0 own goal to 100) to a CSS top %, inset so the tallest token (with labels) stays inside. */
+const slotTop = (y: number) => 13 + (100 - y) * 0.76;
+
 /** A pitch with mowing stripes, own goal at the bottom. Slot x/y are 0 to 100. */
 export function Pitch({ slots, selectedKey, highlight, onSlot, flashKey, compact = false, label = 'Formation' }: PitchProps) {
   return (
@@ -63,7 +66,7 @@ export function Pitch({ slots, selectedKey, highlight, onSlot, flashKey, compact
             className={`absolute flex w-[22%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 rounded-xl p-0.5 text-center focus-visible:outline-2 focus-visible:outline-gold-400 disabled:cursor-default ${
               flashKey === s.key ? 'animate-[flip_0.6s_ease-out]' : ''
             }`}
-            style={{ left: `${s.x}%`, top: `${100 - s.y}%` }}
+            style={{ left: `${s.x}%`, top: `${slotTop(s.y)}%` }}
             aria-label={s.player ? `${s.type}: ${s.player.name}, ${s.player.overall}` : `${s.type}: empty${fits ? ', fits selected player' : ''}`}
             aria-pressed={selected}
           >

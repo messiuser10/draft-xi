@@ -47,17 +47,25 @@ export function Layout() {
             <Link to="/how-to-play" className="btn-ghost hidden text-sm sm:inline-flex">
               How to play
             </Link>
+            <Link to="/hall-of-fame" className="btn-ghost hidden text-sm md:inline-flex">
+              Hall of Fame
+            </Link>
+            {me?.role === 'admin' ? (
+              <Link to="/admin" className="btn-ghost hidden text-sm md:inline-flex">
+                Admin
+              </Link>
+            ) : null}
             <ConnectionDot />
             <button type="button" className="btn-ghost text-sm" onClick={toggleTheme} aria-label="Toggle light and dark">
               {dark ? '☀︎' : '☾'}
             </button>
             {me ? (
               <div className="flex items-center gap-2">
-                <span className="hidden text-sm text-slate-500 sm:inline dark:text-slate-400">
+                <Link to="/profile" className="hidden text-sm text-slate-500 hover:underline sm:inline dark:text-slate-400">
                   {me.displayName}
                   {me.isGuest ? ' (guest)' : ''}
                   {me.role === 'admin' ? ' · admin' : ''}
-                </span>
+                </Link>
                 <button type="button" className="btn-ghost px-2 text-sm" onClick={() => logout.mutate()}>
                   Sign out
                 </button>

@@ -15,12 +15,14 @@ import type { ApiErrorBody } from '../contracts';
 import type { Database } from '../db/database';
 import { AppError } from '../errors';
 import { DraftService } from '../games/draft';
+import { ResultsService } from '../games/results';
 import { SeasonService } from '../games/season';
 import { GameService, NULL_HUB } from '../games/service';
 import { createRealtime } from '../realtime/socket';
 import { registerAdminRoutes } from './routes/admin';
 import { registerAuthRoutes } from './routes/auth';
 import { registerDraftRoutes } from './routes/draft';
+import { registerResultsRoutes } from './routes/results';
 import { registerGameRoutes } from './routes/games';
 
 declare module 'fastify' {
@@ -36,6 +38,7 @@ export interface ServerContext {
   games: GameService;
   draft: DraftService;
   seasons: SeasonService;
+  results: ResultsService;
   /** Sets or clears the session cookie. */
   setSession(reply: FastifyReply, token: string | null): void;
 }
@@ -74,6 +77,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
     autoStartSeasonMs: 10_000,
   });
   const seasons = new SeasonService(database, NULL_HUB, draft);
+  const results = new ResultsService(database, seasons, draft, games, NULL_HUB);
   games.setExtensions({
     snapshotExtras: async (game, parts, viewer) => ({
       draft: await draft.draftView(game, parts, viewer),
@@ -90,6 +94,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
     games,
     draft,
     seasons,
+    results,
     setSession(reply, token) {
       if (token === null) {
         void reply.clearCookie(SESSION_COOKIE, { path: '/' });
@@ -132,6 +137,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
   registerAuthRoutes(app, ctx, { rateLimit: options.authRateLimit ?? 20 });
   registerGameRoutes(app, ctx);
   registerDraftRoutes(app, ctx);
+  registerResultsRoutes(app, ctx);
   registerAdminRoutes(app, ctx);
 
   // Production: serve the built web app, with client-side routing falling back to index.html.
@@ -155,6 +161,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
   games.setHub(hub);
   draft.setHub(hub);
   seasons.setHub(hub);
+  results.setHub(hub);
 
   return {
     app,

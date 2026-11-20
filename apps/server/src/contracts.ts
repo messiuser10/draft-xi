@@ -492,7 +492,8 @@ export type GameEvent =
   | { type: 'pool:health'; poolHealth: PoolHealthView; aiClubCount: number }
   | { type: 'draft:pick'; pick: PickView; game: GameView; teamName: string; playerName: string }
   | { type: 'draft:undo'; pickNumber: number; game: GameView }
-  | { type: 'playback:updated'; playback: PlaybackState };
+  | { type: 'playback:updated'; playback: PlaybackState }
+  | { type: 'game:rematch'; code: string };
 
 export interface PublicLobbyView {
   code: string;
@@ -505,4 +506,191 @@ export interface PublicLobbyView {
 
 export interface ApiErrorBody {
   error: { code: string; message: string; issues?: { path: string; message: string }[] };
+}
+
+// ---------- Results, profiles and history (M5) ----------
+
+export const exportQuerySchema = z.object({ format: z.enum(['json', 'csv']).default('json') });
+export const seasonQuerySchema = z.object({ season: z.coerce.number().int().min(1).optional() });
+
+export interface AwardPlayerView {
+  playerId: number;
+  name: string;
+  teamId: string;
+  teamName: string;
+  appearances: number;
+  goals: number;
+  assists: number;
+  cleanSheets: number;
+  avgRating: number;
+}
+
+export interface DraftValueView extends AwardPlayerView {
+  pickNumber: number;
+  performanceRank: number;
+  /** pickNumber minus performanceRank: positive means he outperformed his draft slot. */
+  delta: number;
+}
+
+export interface AwardsView {
+  championTeamId: string;
+  championName: string;
+  goldenBoot: AwardPlayerView | null;
+  playmaker: AwardPlayerView | null;
+  goldenGlove: AwardPlayerView | null;
+  playerOfTheSeason: AwardPlayerView | null;
+  teamOfTheSeason: { formation: string; slots: (LineupSlotView & { stat: AwardPlayerView })[] } | null;
+  bestDraftSteal: DraftValueView | null;
+  biggestFlop: DraftValueView | null;
+}
+
+export interface PickGradeView {
+  pickNumber: number;
+  round: number;
+  participantId: number;
+  teamId: string | null;
+  playerId: number;
+  playerName: string;
+  slotKey: string;
+  overall: number;
+  poolRank: number;
+  tag: 'Steal' | 'Fair' | 'Reach';
+  autoPicked: boolean;
+}
+
+export interface DraftGradeView {
+  participantId: number;
+  teamId: string;
+  teamName: string;
+  preseasonRank: number;
+  finish: number;
+  grade: string;
+  score: number;
+}
+
+export interface HeadToHeadView {
+  teamAId: string;
+  teamBId: string;
+  aWins: number;
+  draws: number;
+  bWins: number;
+  aGoals: number;
+  bGoals: number;
+  fixtures: { fixtureId: number; matchday: number; homeTeamId: string; homeGoals: number; awayGoals: number }[];
+}
+
+export interface ResultsView {
+  gameCode: string;
+  gameName: string;
+  season: number;
+  seasonCount: number;
+  championTeamId: string | null;
+  teams: LeagueTeamView[];
+  finalTable: StandingView[];
+  awards: AwardsView | null;
+  grades: DraftGradeView[];
+  picks: PickGradeView[];
+  headToHead: HeadToHeadView[];
+  /** Plain-text summary for Copy Summary. */
+  summary: string;
+}
+
+export interface SplitView {
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  points: number;
+}
+
+export interface TeamPageView {
+  gameCode: string;
+  season: number;
+  team: LeagueTeamView;
+  finalRow: StandingView | null;
+  players: (LineupSlotView & { appearances: number; goals: number; assists: number; cleanSheets: number; avgRating: number })[];
+  timeline: {
+    matchday: number;
+    fixtureId: number;
+    opponentId: string;
+    opponentName: string;
+    home: boolean;
+    goalsFor: number;
+    goalsAgainst: number;
+    result: 'W' | 'D' | 'L';
+    position: number;
+  }[];
+  home: SplitView;
+  away: SplitView;
+  biggestWin: { fixtureId: number; matchday: number; opponentName: string; goalsFor: number; goalsAgainst: number; home: boolean } | null;
+  longestUnbeaten: number;
+  topScorer: { playerId: number; name: string; goals: number } | null;
+}
+
+export interface TrophyView {
+  gameCode: string;
+  gameName: string;
+  seasonNumber: number;
+  teamName: string;
+  points: number;
+  createdAt: string;
+}
+
+export interface ProfileGameView {
+  gameCode: string;
+  gameName: string;
+  status: GameStatus;
+  teamName: string;
+  /** Final position in the first season, once played. */
+  finish: number | null;
+  grade: string | null;
+  createdAt: string;
+}
+
+export interface ProfileView {
+  user: { id: number; displayName: string; username: string | null; isGuest: boolean };
+  gamesPlayed: number;
+  seasonsPlayed: number;
+  titles: number;
+  avgFinish: number | null;
+  bestGrade: string | null;
+  trophies: TrophyView[];
+  games: ProfileGameView[];
+}
+
+export interface HallOfFameEntry {
+  gameCode: string;
+  gameName: string;
+  seasonNumber: number;
+  championName: string;
+  championIsHuman: boolean;
+  /** The champion's manager when a human team won. */
+  managerName: string | null;
+  points: number;
+  createdAt: string;
+}
+
+export interface LeaderboardRow {
+  userId: number;
+  displayName: string;
+  titles: number;
+  seasons: number;
+  avgFinish: number;
+}
+
+export interface RecordEntry {
+  value: number;
+  label: string;
+  teamName: string;
+  gameCode: string;
+  gameName: string;
+  seasonNumber: number;
+}
+
+export interface RecordBookView {
+  mostPoints: RecordEntry | null;
+  mostGoalsByDrafted: RecordEntry | null;
+  bestGoalDifference: RecordEntry | null;
 }

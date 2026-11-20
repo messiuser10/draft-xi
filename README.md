@@ -15,7 +15,7 @@ Unofficial fan game, not affiliated with any club, league or player.
 | M2 | Server foundation: accounts, guests, admin roles, lobby, host controls, Socket.IO, start-game flow; web app with home, sign-in, create, lobby and kickoff | Done |
 | M3 | Draft room: snake, linear and Pack Pick modes, pick validation in transactions, server timers, auto-pick, queue, bots, host controls, disconnect handling, Team Reveal | Done |
 | M4 | Season: stored simulation, synchronized or own-pace playback, matchday results, live table, match ticker, key moments, League Teams, Run It Back, multi-season, Expected Strength (Monte Carlo) | Done |
-| M5 | Results: awards, draft grades, team pages, profiles, Hall of Fame | Next |
+| M5 | Results: awards, draft grades and pick tags, team pages, head to head, share text and image, export, rematch, profiles, Hall of Fame, leaderboard, record book | Done |
 | M6 to M7 | Admin, polish | Not started |
 
 ## Requirements
@@ -147,6 +147,8 @@ Main endpoints (all under `/api`):
 | Pool | `GET /pool` (clubs and every draftable player) |
 | Draft | `POST /games/:code/picks` `{ playerId, slotKey }`, `PUT /games/:code/queue` `{ playerIds }`, `GET /games/:code/pack`, `POST /games/:code/pack/reroll` |
 | Host draft controls | `POST /games/:code/draft/{pause,resume,skip,undo,extend,end,bot,disconnect-policy}` |
+| Results | `GET /games/:code/results?season=n`, `GET /games/:code/teams/:teamId?season=n`, `GET /games/:code/export?format=json\|csv` (host), `POST /games/:code/rematch` (host) |
+| History | `GET /profile`, `GET /users/:id/profile`, `GET /hall-of-fame`, `GET /leaderboard`, `GET /records` |
 | Season | `POST /games/:code/season` (start), `POST /games/:code/seasons` `{ count }` (Run It Back, multi-season), `GET /games/:code/seasons`, `GET /games/:code/seasons/:n`, `GET /games/:code/league`, `GET /games/:code/montecarlo?runs=1000`, `POST /games/:code/playback` `{ action, speed?, matchday?, seasonNumber? }` |
 
 Pick timers are stored in the database (`games.pick_deadline`) and re-armed when the server

@@ -4,6 +4,7 @@ import { type FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { api } from '../lib/api';
 import { useSite } from '../lib/session';
+import { useHallOfFame } from './HallOfFame';
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export function HomePage() {
     refetchInterval: 10_000,
   });
 
+  const fame = useHallOfFame();
   const join = (e: FormEvent) => {
     e.preventDefault();
     const clean = code.trim().toUpperCase();
@@ -102,8 +104,31 @@ export function HomePage() {
       </section>
 
       <section className="card p-5">
-        <h2 className="display text-2xl text-gold-500">Hall of Fame</h2>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Champions appear here once the first season is played.</p>
+        <div className="flex items-center gap-3">
+          <h2 className="display flex-1 text-2xl text-gold-500">Hall of Fame</h2>
+          <Link to="/leaderboard" className="btn-ghost text-sm">
+            Leaderboard
+          </Link>
+          <Link to="/hall-of-fame" className="btn-ghost text-sm">
+            See all
+          </Link>
+        </div>
+        {!fame.data?.length ? (
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Champions appear here once the first season is played.</p>
+        ) : (
+          <ul className="mt-3 flex snap-x gap-2 overflow-x-auto pb-1">
+            {fame.data.slice(0, 8).map((e) => (
+              <li key={e.gameCode} className="w-48 shrink-0 snap-start">
+                <Link to={`/results/${e.gameCode}?season=1`} className="block rounded-xl bg-gold-500/10 p-3 hover:bg-gold-500/20">
+                  <span className="block truncate font-semibold">🏆 {e.championName}</span>
+                  <span className="block truncate text-xs text-slate-500">
+                    {e.managerName ?? 'AI club'} · {e.points} pts
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
