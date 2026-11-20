@@ -16,9 +16,18 @@ export type ParticipantRow = Database['t']['participants']['$inferSelect'];
 
 /** Stored settings, filled with defaults for any key added after the game was created. */
 export function settingsOf(game: GameRow): GameSettings {
-  const parsed = gameSettingsSchema.safeParse({ ...DEFAULT_GAME_SETTINGS, ...game.settings });
+  // Games created before Club Spin existed keep drafting without it.
+  const parsed = gameSettingsSchema.safeParse({ ...DEFAULT_GAME_SETTINGS, clubSpin: false, ...game.settings });
   return parsed.success ? parsed.data : DEFAULT_GAME_SETTINGS;
 }
+
+/** Club Spin is on for this game (Pack Pick has its own way of narrowing the choice). */
+export function spinApplies(settings: GameSettings): boolean {
+  return settings.clubSpin && settings.draftMode !== 'pack';
+}
+
+/** How long the Club Spin reel takes to land in the draft room; added to each spin turn's clock. */
+export const SPIN_MS = 3000;
 
 export function formationOf(p: ParticipantRow): FormationId | null {
   return p.formation !== null && isFormationId(p.formation) ? p.formation : null;

@@ -49,6 +49,8 @@ import {
   settingsOf,
   toGameView,
   toParticipantView,
+  SPIN_MS,
+  spinApplies,
 } from './views';
 
 export interface GameHub {
@@ -591,7 +593,7 @@ export class GameService {
           seed,
           currentPickNumber: 1,
           currentParticipantId: first?.id ?? null,
-          pickDeadline: settings.pickTimerSeconds === null ? null : new Date(now + settings.pickTimerSeconds * 1000),
+          pickDeadline: settings.pickTimerSeconds === null ? null : new Date(now + settings.pickTimerSeconds * 1000 + (spinApplies(settings) ? SPIN_MS : 0)),
           strengthSnapshot: snapshot,
           aiClubIds,
         })

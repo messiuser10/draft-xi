@@ -5,7 +5,7 @@ const STEPS = [
   ['Create or join', 'Start a game and share the 6-letter code, link or QR code. Friends can join as guests with just a name. The host can fill empty seats with bots.'],
   ['Set up your team', 'Pick a team name, colour, monogram and formation. Ready up when you are happy; the host starts the draft.'],
   ['The league', 'There are always 20 teams. With N drafters, the 20 minus N strongest real clubs join as AI teams and play their best XI.'],
-  ['Draft', 'Take turns picking players into open slots of your formation. A player must fit the slot, and each player can only be drafted once. Miss the clock and you get an auto-pick.'],
+  ['Draft', 'Before every pick a wheel spins and lands on a club: you must draft one of that club\'s players into an open slot of your formation. A player must fit the slot, each player can only be drafted once, and once drafted a player is locked in that position. Miss the clock and you get an auto-pick from the spun club.'],
   ['The season', 'Everyone plays everyone twice: 38 matchdays. Watch the table move, then see the champion, awards and draft grades.'],
 ] as const;
 

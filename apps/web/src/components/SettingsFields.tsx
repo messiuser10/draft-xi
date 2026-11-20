@@ -141,6 +141,12 @@ export function SettingsFields({ value, onChange, site, disabled }: Props) {
           <option value="own_pace">Own pace</option>
         </select>
       </div>
+      <Toggle
+        label={value.draftMode === 'pack' ? 'Club spin (not used with Pack pick)' : 'Club spin: a wheel picks the club for every pick'}
+        checked={value.clubSpin}
+        disabled={disabled || value.draftMode === 'pack'}
+        onChange={(v) => set({ clubSpin: v })}
+      />
       <Toggle label="Strict position matching" checked={value.strictPositions} disabled={disabled} onChange={(v) => set({ strictPositions: v })} />
       <Toggle label="Remove drafted players from AI squads" checked={value.removeDraftedFromAi} disabled={disabled} onChange={(v) => set({ removeDraftedFromAi: v })} />
       <Toggle label="Bots allowed" checked={value.botsAllowed} disabled={disabled} onChange={(v) => set({ botsAllowed: v })} />

@@ -14,9 +14,10 @@ import {
 } from '@draft-xi/engine';
 import type { GameSnapshot, ParticipantView, PickView, PoolPlayerView } from '@draft-xi/server/contracts';
 import { useQuery } from '@tanstack/react-query';
-import { type KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { Chat } from '../components/Chat';
+import { ClubSpin, useSpin } from '../components/ClubSpin';
 import { ErrorCard } from '../components/ErrorBoundary';
 import { CountdownRing } from '../components/CountdownRing';
 import { Kickoff } from '../components/Kickoff';
@@ -141,6 +142,17 @@ function DraftRoom({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData 
   const [showKickoff, setShowKickoff] = useState(() => picks.length === 0 && !sessionStorage.getItem(`kickoff:${code}`));
   const { run, busy } = useAction();
 
+  // Club Spin: the pool narrows to the spun club once the reel has landed for this pick.
+  const spinOn = settings.clubSpin && settings.draftMode !== 'pack' && game.status !== 'draft_complete';
+  const spinQuery = useSpin(code, game.currentPickNumber, spinOn);
+  const spin = spinQuery.data?.pickNumber === game.currentPickNumber ? spinQuery.data : null;
+  const [landedPick, setLandedPick] = useState<number | null>(null);
+  const onLanded = useCallback((n: number) => setLandedPick(n), []);
+  const spinLanded = !spinOn || (spin !== null && landedPick === game.currentPickNumber);
+  const spunClub = spinOn && spinLanded ? (spin?.clubId ?? null) : null;
+  const canPick = myTurn && spinLanded;
+  const fromSpunClub = (playerId: number) => spunClub === null || pool.playersById.get(playerId)?.clubId === spunClub;
+
   // A slot that got filled is no longer selectable.
   const activeSlot = selectedSlot && mine?.openKeys.has(selectedSlot) ? selectedSlot : null;
 
@@ -154,7 +166,7 @@ function DraftRoom({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData 
 
   const viewed = mine ?? onClock ?? teams[0];
   const selected = selectedPlayer !== null ? pool.playersById.get(selectedPlayer) : undefined;
-  const highlight = new Set(selected && mine && !takenBy.has(selected.id) ? fittingKeys(selected, mine) : []);
+  const highlight = new Set(selected && mine && !takenBy.has(selected.id) && (!myTurn || fromSpunClub(selected.id)) ? fittingKeys(selected, mine) : []);
   const lastPick = picks.at(-1);
 
   return (
@@ -177,6 +189,9 @@ function DraftRoom({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData 
 
       <TopBar snapshot={snapshot} onClock={onClock} round={round} myTurn={myTurn} />
       <PickOrderStrip snapshot={snapshot} round={round} />
+      {spinOn && spin && onClock && !showKickoff ? (
+        <ClubSpin key={spin.pickNumber} spin={spin} pool={pool} teamName={onClock.team.teamName ?? 'This team'} myTurn={myTurn} onLanded={onLanded} />
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
         <div className="grid content-start gap-4">
@@ -189,8 +204,9 @@ function DraftRoom({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData 
               highlight={highlight}
               flashKey={lastPick && lastPick.participantId === viewed.team.id ? lastPick.slotKey : null}
               onSlot={(key) => {
-                if (!mine) return;
-                if (selected && highlight.has(key) && myTurn) void doPick(selected.id, key);
+                // Drafted players are locked into their slot: filled slots do nothing.
+                if (!mine?.openKeys.has(key)) return;
+                if (selected && highlight.has(key) && canPick) void doPick(selected.id, key);
                 else setSelectedSlot((s) => (s === key ? null : key));
               }}
             />
@@ -205,7 +221,8 @@ function DraftRoom({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData 
             snapshot={snapshot}
             pool={pool}
             mine={mine}
-            myTurn={myTurn && settings.draftMode !== 'pack'}
+            myTurn={canPick && settings.draftMode !== 'pack'}
+            spinClubId={myTurn ? spunClub : null}
             takenBy={takenBy}
             activeSlot={activeSlot}
             onClearSlot={() => setSelectedSlot(null)}
@@ -225,7 +242,7 @@ function DraftRoom({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData 
           pool={pool}
           snapshot={snapshot}
           takenBy={takenBy}
-          fitting={myTurn && settings.draftMode !== 'pack' && !takenBy.has(selected.id) ? [...highlight] : []}
+          fitting={canPick && settings.draftMode !== 'pack' && !takenBy.has(selected.id) && fromSpunClub(selected.id) ? [...highlight] : []}
           onPick={(slot) => void doPick(selected.id, slot)}
           onCompare={(id) => setCompareWith(id)}
           onClose={() => {
@@ -334,7 +351,7 @@ function MyTeamCard({
       {open ? (
         <div className="mt-3">
           <Pitch slots={pitchSlots(state, pool)} selectedKey={selectedSlot} highlight={highlight} onSlot={isMine ? onSlot : undefined} flashKey={flashKey} label={`${state.team.teamName ?? 'Team'} formation`} />
-          {isMine ? <p className="mt-2 text-xs text-slate-500">Tap an empty slot to filter the pool, or pick a player first to see where he fits.</p> : null}
+          {isMine ? <p className="mt-2 text-xs text-slate-500">Tap an empty slot to filter the pool, or pick a player first to see where he fits. Drafted players are locked in their position.</p> : null}
         </div>
       ) : null}
       <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -379,11 +396,13 @@ function PoolPanel({
   onSelect,
   onPick,
   busy,
+  spinClubId,
 }: {
   snapshot: GameSnapshot;
   pool: PoolData;
   mine: TeamState | undefined;
   myTurn: boolean;
+  spinClubId: number | null;
   takenBy: Map<number, number>;
   activeSlot: string | null;
   onClearSlot: () => void;
@@ -420,7 +439,8 @@ function PoolPanel({
     return pool.players
       .filter((p) => {
         if (needle && !p.name.toLowerCase().includes(needle)) return false;
-        if (club && String(p.clubId) !== club) return false;
+        if (spinClubId !== null && p.clubId !== spinClubId) return false;
+        if (spinClubId === null && club && String(p.clubId) !== club) return false;
         if (position && !positionsOf(p).includes(position as never)) return false;
         if (nationality && p.nationality !== nationality) return false;
         if (p.overall < minOvr || p.overall > maxOvr) return false;
@@ -434,7 +454,8 @@ function PoolPanel({
         if (sort === 'club') return (pool.clubsById.get(a.clubId)?.name ?? '').localeCompare(pool.clubsById.get(b.clubId)?.name ?? '') || b.overall - a.overall;
         return b.overall - a.overall || a.name.localeCompare(b.name);
       });
-  }, [pool, q, club, position, nationality, minOvr, maxOvr, hideTaken, slotType, fitsOnly, mine, sort, takenBy]);
+  }, [pool, q, club, position, nationality, minOvr, maxOvr, hideTaken, slotType, fitsOnly, mine, sort, takenBy, spinClubId]);
+  const spunName = spinClubId === null ? null : (pool.clubsById.get(spinClubId)?.name ?? 'the spun club');
 
   const toggleQueue = async (id: number) => {
     const next = queue.includes(id) ? queue.filter((x) => x !== id) : [...queue, id];
@@ -462,7 +483,7 @@ function PoolPanel({
       aria-controls="player-pool"
       aria-expanded={sheetOpen}
     >
-      {myTurn ? 'Your pick: open the player pool' : `Player pool (${list.length})`}
+      {myTurn ? (spunName ? `Your pick: ${spunName} players` : 'Your pick: open the player pool') : `Player pool (${list.length})`}
     </button>
     {sheetOpen ? <div className="fixed inset-0 z-30 bg-night-950/60 lg:hidden" aria-hidden onClick={() => setSheetOpen(false)} /> : null}
     <section
@@ -477,6 +498,11 @@ function PoolPanel({
           <button type="button" className="rounded-full bg-pitch-500 px-3 py-1 text-xs font-bold text-night-950" onClick={onClearSlot}>
             Filling {activeSlot} ({slotType}) ✕
           </button>
+        ) : null}
+        {spunName ? (
+          <span className="rounded-full bg-gold-400 px-3 py-1 text-xs font-bold text-night-950" title="The wheel decides the club for this pick">
+            🔒 {spunName} only
+          </span>
         ) : null}
         <span className="ml-auto text-xs text-slate-500 max-sm:hidden">{list.length} players</span>
         <button type="button" className="btn-ghost ml-auto min-h-9 px-3 text-sm lg:hidden" onClick={() => setSheetOpen(false)}>
@@ -500,7 +526,7 @@ function PoolPanel({
         </label>
         <label>
           <span className="sr-only">Club</span>
-          <select className="input" value={club} onChange={(e) => setClub(e.target.value)}>
+          <select className="input" value={spinClubId === null ? club : String(spinClubId)} disabled={spinClubId !== null} onChange={(e) => setClub(e.target.value)}>
             <option value="">All clubs</option>
             {[...pool.clubs].sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
               <option key={c.id} value={c.id}>

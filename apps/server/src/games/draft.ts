@@ -25,7 +25,7 @@ import {
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { actorOf, type AuthUser, isUniqueViolation, requireUser } from '../auth/service';
 import { SYSTEM_ACTOR, writeAudit } from '../audit';
-import type { DraftView, GameSettings, PickView } from '../contracts';
+import type { DraftView, GameSettings, PickView, SpinView } from '../contracts';
 import type { AppDb, Database } from '../db/database';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../errors';
 import { getSetting } from '../settings/app-settings';
@@ -38,6 +38,8 @@ import {
   PACK_REROLLS,
   type ParticipantRow,
   settingsOf,
+  SPIN_MS,
+  spinApplies,
   toGameView,
   toParticipantView,
 } from './views';
@@ -162,6 +164,45 @@ export class DraftService {
     return this.packFor(game, me, picks, await loadPool(this.database), await this.compatibility()).map((p) => p.id);
   }
 
+  /** Club Spin: which club the team on the clock must draft from. Anyone watching may see it. */
+  async spinFor(code: string): Promise<SpinView | null> {
+    const state = await this.loadByCode(code);
+    const { game, parts } = state;
+    if (!spinApplies(settingsOf(game)) || game.status === 'lobby' || game.currentParticipantId === null) return null;
+    if (game.status !== 'drafting' && game.status !== 'paused') return null;
+    const p = parts.find((x) => x.id === game.currentParticipantId);
+    if (!p) return null;
+    const { clubId, candidates } = this.spinOf(state, p, await loadPool(this.database), await this.compatibility());
+    return { pickNumber: game.currentPickNumber, participantId: p.id, clubId, candidates };
+  }
+
+  /**
+   * The wheel lands on one of the clubs that still has a player this team could legally take,
+   * chosen from the game seed, the pick number and the team, so it is fixed for that turn
+   * (reloading or undoing does not re-spin it) and every client sees the same club.
+   */
+  private spinOf(state: DraftState, p: ParticipantRow, pool: Pool, compatibility: SlotCompatibility): { clubId: number | null; candidates: number[] } {
+    const { game, picks } = state;
+    const settings = settingsOf(game);
+    const formation = formationOf(p);
+    if (!formation) return { clubId: null, candidates: [] };
+    const taken = new Set(picks.map((x) => x.playerId));
+    const mine = picks.filter((x) => x.participantId === p.id);
+    const open = openSlots(formation, mine.map((x) => x.slotKey));
+    const byId = new Map(pool.players.map((x) => [x.id, x]));
+    const allowance = allowanceOf(mine.flatMap((x) => byId.get(x.playerId) ?? []), pool, settings.clubCap);
+    const eligible = new Set<number>();
+    for (const player of pool.players) {
+      if (taken.has(player.id) || player.clubId === null || eligible.has(player.clubId)) continue;
+      if ((allowance?.get(player.clubId) ?? 1) <= 0) continue;
+      if (open.some((slot) => slotAccepts(player, slot, compatibility, settings.strictPositions))) eligible.add(player.clubId);
+    }
+    const candidates = [...eligible].sort((a, b) => a - b);
+    if (candidates.length === 0) return { clubId: null, candidates };
+    const rng = deriveRng(game.seed ?? 0, 'spin', game.currentPickNumber, p.id);
+    return { clubId: candidates[rng.int(0, candidates.length - 1)]!, candidates };
+  }
+
   // ---------- Picks ----------
 
   /** A human's pick. All checks happen on the server inside one transaction. */
@@ -234,6 +275,13 @@ export class DraftService {
         const sameClub = mine.filter((p) => pool.players.find((x) => x.id === p.playerId)?.clubId === player.clubId).length;
         if (sameClub >= settings.clubCap) {
           throw badRequest('club_cap', `You can take at most ${settings.clubCap} players from one club`);
+        }
+      }
+      if (spinApplies(settings)) {
+        const { clubId } = this.spinOf(state, participant, pool, compatibility);
+        if (clubId !== null && player.clubId !== clubId) {
+          const club = pool.clubs.find((c) => c.id === clubId)?.name ?? 'the spun club';
+          throw badRequest('wrong_club', `The wheel landed on ${club}: draft one of their players`);
         }
       }
       if (settings.draftMode === 'pack' && !req.autoPicked && !participant.isBot) {
@@ -329,7 +377,8 @@ export class DraftService {
     const { game, parts, picks } = state;
     const settings = settingsOf(game);
     const taken = new Set(picks.map((x) => x.playerId));
-    const available = pool.players.filter((x) => !taken.has(x.id));
+    const spunClub = spinApplies(settings) ? this.spinOf(state, p, pool, compatibility).clubId : null;
+    const available = pool.players.filter((x) => !taken.has(x.id) && (spunClub === null || x.clubId === spunClub));
     const formation = formationOf(p)!;
     const mine = picks.filter((x) => x.participantId === p.id);
     const open = openSlots(formation, mine.map((x) => x.slotKey));
@@ -395,7 +444,12 @@ export class DraftService {
     const [p] = await db.select().from(t.participants).where(eq(t.participants.id, game.currentParticipantId)).limit(1);
     if (!p) return;
     let delay: number;
-    if (p.isBot || p.autoDraft !== null) delay = this.options.botDelayMs;
+    if (p.isBot || p.autoDraft !== null) {
+      // With Club Spin, let the reel stop before a bot picks. The wait scales with the bot delay
+      // (1.5s bots wait the full 3s; instant bots in tests and smoke runs do not wait).
+      const spinWait = spinApplies(settingsOf(game)) ? Math.min(SPIN_MS, this.options.botDelayMs * 2) : 0;
+      delay = this.options.botDelayMs + spinWait;
+    }
     else if (game.pickDeadline) delay = Math.max(0, game.pickDeadline.getTime() - Date.now());
     else return;
     const expected = game.currentPickNumber;
@@ -533,7 +587,7 @@ export class DraftService {
       const settings = settingsOf(game);
       await tx.delete(t.draftPicks).where(eq(t.draftPicks.id, last.id));
       const paused = game.status === 'paused';
-      const timerMs = settings.pickTimerSeconds === null ? null : settings.pickTimerSeconds * 1000;
+      const timerMs = settings.pickTimerSeconds === null ? null : settings.pickTimerSeconds * 1000 + (spinApplies(settings) ? SPIN_MS : 0);
       const [updated] = await tx
         .update(t.games)
         .set({
@@ -727,6 +781,7 @@ function allowanceOf(roster: readonly EnginePlayer[], pool: Pool, cap: number | 
   return allowance;
 }
 
-function deadlineFrom(settings: GameSettings): Date | null {
-  return settings.pickTimerSeconds === null ? null : new Date(Date.now() + settings.pickTimerSeconds * 1000);
+export function deadlineFrom(settings: GameSettings): Date | null {
+  if (settings.pickTimerSeconds === null) return null;
+  return new Date(Date.now() + settings.pickTimerSeconds * 1000 + (spinApplies(settings) ? SPIN_MS : 0));
 }

@@ -372,6 +372,7 @@ function SettingsCard({ snapshot }: { snapshot: GameSnapshot }) {
   const rows: [string, string][] = [
     ['Visibility', s.visibility === 'public' ? 'Public' : 'Private'],
     ['Draft', s.draftMode],
+    ['Club spin', s.clubSpin && s.draftMode !== 'pack' ? 'On' : 'Off'],
     ['Pick timer', s.pickTimerSeconds === null ? 'Off' : `${s.pickTimerSeconds}s`],
     ['Formations', s.formationRule === 'forced' ? `Forced ${s.forcedFormation}` : 'Each chooses'],
     ['Club cap', s.clubCap === null ? 'None' : `${s.clubCap} per club`],

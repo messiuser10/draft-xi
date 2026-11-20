@@ -22,10 +22,10 @@ describe.each(DIALECTS)('draft on %s', (_name, open) => {
   const snap = async (c: Client, code: string) => (await c.get<GameSnapshot>(`/api/games/${code}`)).body;
   const { t } = { t: () => server.database.t };
 
-  /** Host plus guests, started and drafting. Default: no pick timer so nothing fires on its own. */
+  /** Host plus guests, started and drafting. Default: no pick timer so nothing fires on its own, and no Club Spin. */
   async function startDraft(settings: Record<string, unknown> = {}, guests = 1) {
     const host = await registeredClient(server.app);
-    const res = await host.post<Created>('/api/games', { name: 'Draft Night', settings: { pickTimerSeconds: null, ...settings }, team: team('Host FC') });
+    const res = await host.post<Created>('/api/games', { name: 'Draft Night', settings: { pickTimerSeconds: null, clubSpin: false, ...settings }, team: team('Host FC') });
     expect(res.status, JSON.stringify(res.body)).toBe(201);
     const code = res.body.game.code;
     const others: Client[] = [];
@@ -216,6 +216,43 @@ describe.each(DIALECTS)('draft on %s', (_name, open) => {
       }
     }
     expect((await host.post<ErrorBody>(`/api/games/${code}/picks`, { playerId: best('ST').id, slotKey: 'ST' })).body.error.code).toBe('not_drafting');
+  });
+
+  it('Club Spin fixes a club per pick, refuses other clubs and makes auto-picks follow it', async () => {
+    type Spin = { spin: { pickNumber: number; participantId: number; clubId: number | null; candidates: number[] } | null };
+    const { host, others, code } = await startDraft({ clubSpin: true });
+    const guest = others[0]!;
+    const view = await snap(host, code);
+    const first = (await guest.get<Spin>(`/api/games/${code}/spin`)).body.spin!;
+    expect(first.pickNumber).toBe(1);
+    expect(first.participantId).toBe(view.participants[0]!.id);
+    expect(first.clubId).not.toBeNull();
+    expect(first.candidates).toContain(first.clubId);
+    expect(first.candidates.length).toBeGreaterThan(1);
+    // The same turn always shows the same club.
+    expect((await host.get<Spin>(`/api/games/${code}/spin`)).body.spin).toEqual(first);
+
+    const slots = getFormation('4-3-3').slots;
+    const fits = (p: PoolPlayerView) => slots.find((s) => fitsSlot({ primaryPosition: positions(p)[0]!, altPositions: positions(p).slice(1) }, s.type));
+    const elsewhere = pool.players.find((p) => p.clubId !== first.clubId && fits(p))!;
+    const refused = await host.post<ErrorBody>(`/api/games/${code}/picks`, { playerId: elsewhere.id, slotKey: fits(elsewhere)!.key });
+    expect(refused.status).toBe(400);
+    expect(refused.body.error.code).toBe('wrong_club');
+    const fromClub = [...pool.players].sort((a, b) => b.overall - a.overall).find((p) => p.clubId === first.clubId && fits(p))!;
+    expect((await host.post(`/api/games/${code}/picks`, { playerId: fromClub.id, slotKey: fits(fromClub)!.key })).status).toBe(201);
+
+    // Skipping the guest's turn auto-picks from the club the wheel landed on.
+    const second = (await host.get<Spin>(`/api/games/${code}/spin`)).body.spin!;
+    expect(second.pickNumber).toBe(2);
+    expect(second.participantId).toBe(view.participants[1]!.id);
+    expect((await host.post(`/api/games/${code}/draft/skip`)).status).toBe(200);
+    const auto = (await snap(host, code)).draft!.picks.find((p) => p.pickNumber === 2)!;
+    expect(pool.players.find((p) => p.id === auto.playerId)!.clubId).toBe(second.clubId);
+
+    // The rest of the draft completes with every pick legal.
+    expect((await host.post(`/api/games/${code}/draft/end`)).status).toBe(200);
+    await waitFor(async () => (await snap(host, code)).game.status === 'draft_complete');
+    expect((await host.get<Spin>(`/api/games/${code}/spin`)).body.spin).toBeNull();
   });
 
   it('Pack Pick only allows the five offered players and one reroll', async () => {

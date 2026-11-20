@@ -58,6 +58,8 @@ export const gameSettingsSchema = z.object({
   visibility: z.enum(VISIBILITIES),
   maxHumans: z.number().int().min(1).max(HARD_MAX_HUMANS),
   draftMode: z.enum(DRAFT_MODES),
+  /** Club Spin: before each pick a wheel picks a real club and the team on the clock must draft from it (not in Pack Pick). */
+  clubSpin: z.boolean().default(true),
   /** Seconds per pick, or null for no timer. */
   pickTimerSeconds: z.number().int().min(5).max(600).nullable(),
   formationRule: z.enum(FORMATION_RULES),
@@ -76,6 +78,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   visibility: 'private',
   maxHumans: 8,
   draftMode: 'snake',
+  clubSpin: true,
   pickTimerSeconds: 60,
   formationRule: 'choose',
   forcedFormation: null,
@@ -283,6 +286,16 @@ export interface PickView {
   slotKey: string;
   autoPicked: boolean;
   createdAt: string;
+}
+
+/** Club Spin result for the pick on the clock. */
+export interface SpinView {
+  pickNumber: number;
+  participantId: number;
+  /** The club the team on the clock must draft from; null when no club has a legal player. */
+  clubId: number | null;
+  /** Every club the wheel could have landed on (each has a legal player for this team). */
+  candidates: number[];
 }
 
 export interface DraftView {

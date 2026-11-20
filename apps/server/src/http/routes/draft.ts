@@ -56,6 +56,7 @@ export function registerDraftRoutes(app: FastifyInstance, ctx: ServerContext): v
     return reply.status(201).send({ pick });
   });
 
+  app.get('/api/games/:code/spin', async (req) => ({ spin: await draft.spinFor(code(req.params)) }));
   app.get('/api/games/:code/pack', async (req) => ({ options: await draft.packOptionsFor(code(req.params), req.user) }));
   app.post('/api/games/:code/pack/reroll', async (req) => ({ options: await draft.reroll(code(req.params), req.user) }));
 

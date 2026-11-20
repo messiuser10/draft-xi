@@ -162,3 +162,9 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - Render errors are caught by an error boundary around each page (cleared on navigation) plus a router-level fallback.
 - The Docker image runs the server through tsx like `npm start`, so it keeps the full node_modules; there is no separate server compile step.
 - The Playwright smoke test uses a throwaway SQLite file, `BOT_PICK_DELAY_MS=0` and `START_COUNTDOWN_SECONDS=0` so a full game runs in seconds; it is not part of `npm run check` because it needs a browser download.
+- Club Spin (owner request, not in the spec): a game setting (`clubSpin`), on by default for new games; games created earlier keep drafting without it. Pack Pick ignores it.
+- The spun club is derived from the game seed, pick number and team, so it is the same for every viewer and after a reload or undo; there is no re-spin.
+- The wheel only lands on clubs that still have an undrafted player who fits one of the team's open slots (and is under the club cap), so a legal pick always exists.
+- Each Club Spin turn gets 3 extra seconds on the pick clock, and bots wait for the reel too: twice `BOT_PICK_DELAY_MS`, at most 3 seconds (so the default 1.5s bots wait the full 3s and instant bots do not wait).
+- Drafted players are locked into the slot they were drafted into; there is no way to move them (the server never allowed it, and tapping a filled slot does nothing).
+- The footer carries the owner's credit line "made by reyansh pathak" under the disclaimer.

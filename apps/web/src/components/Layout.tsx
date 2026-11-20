@@ -114,6 +114,7 @@ export function Layout() {
           {me?.role === 'admin' ? <Link to="/admin" className="hover:underline">Admin</Link> : null}
         </nav>
         {DISCLAIMER}
+        <p className="mt-2 font-semibold text-slate-600 dark:text-slate-300">made by reyansh pathak</p>
       </footer>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4 max-lg:bottom-20" aria-live="polite">
