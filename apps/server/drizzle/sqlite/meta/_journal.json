@@ -29,6 +29,13 @@
       "when": 1795191621359,
       "tag": "0003_club_strength_override",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795194927383,
+      "tag": "0004_rounds_transfers",
+      "breakpoints": true
     }
   ]
 }

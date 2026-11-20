@@ -31,3 +31,10 @@ export type MatchEventType = (typeof MATCH_EVENT_TYPES)[number];
 
 export const AUTO_DRAFT_MODES = ['bot', 'autopick'] as const;
 export type AutoDraftMode = (typeof AUTO_DRAFT_MODES)[number];
+
+export const ROSTER_MOVE_KINDS = ['transfer', 'trade'] as const;
+export type RosterMoveKind = (typeof ROSTER_MOVE_KINDS)[number];
+export const WINDOW_KINDS = ['preseason', 'mini', 'big'] as const;
+export type WindowKind = (typeof WINDOW_KINDS)[number];
+export const TRADE_STATUSES = ['pending', 'accepted', 'declined', 'cancelled'] as const;
+export type TradeStatus = (typeof TRADE_STATUSES)[number];

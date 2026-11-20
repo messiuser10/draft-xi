@@ -167,3 +167,24 @@ describe('tiebreaker order', () => {
     expect(order([]).sort()).toEqual(['A', 'B', 'C', 'D']);
   });
 });
+
+describe('half seasons and mid-season squad changes', () => {
+  it('stops after the last matchday asked for', () => {
+    const half = simulateSeason(teams, { seed: 42, lastMatchday: 19 });
+    expect(half.fixtures).toHaveLength(190);
+    expect(half.standings).toHaveLength(19);
+    expect(half.table.every((r) => r.played === 19)).toBe(true);
+    expect(half.fixtures).toEqual(season.fixtures.slice(0, 190));
+  });
+
+  it('keeps the first half identical when squads change from matchday 20', () => {
+    // Swap the first two teams' lineups for the second half.
+    const changed = teams.map((t, i) => (i === 0 ? { ...t, lineup: teams[1]!.lineup } : i === 1 ? { ...t, lineup: teams[0]!.lineup } : t));
+    const split = simulateSeason(teams, { seed: 42, changes: { fromMatchday: 20, teams: changed } });
+    expect(split.fixtures).toHaveLength(380);
+    expect(split.fixtures.slice(0, 190)).toEqual(season.fixtures.slice(0, 190));
+    expect(split.standings[18]).toEqual(season.standings[18]);
+    expect(split.fixtures.slice(190)).not.toEqual(season.fixtures.slice(190));
+    expect(split.teams[0]!.lineup).toEqual(teams[1]!.lineup);
+  });
+});

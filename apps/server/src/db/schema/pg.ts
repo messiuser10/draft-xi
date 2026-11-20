@@ -24,9 +24,12 @@ import {
   BOT_LEVELS,
   GAME_STATUSES,
   MATCH_EVENT_TYPES,
+  ROSTER_MOVE_KINDS,
   SEASON_STATUSES,
   SEASON_TEAM_KINDS,
+  TRADE_STATUSES,
   USER_ROLES,
+  WINDOW_KINDS,
 } from './enums';
 
 const id = () => integer('id').primaryKey().generatedByDefaultAsIdentity();
@@ -131,10 +134,16 @@ export const games = pgTable(
     strengthSnapshot: json<unknown>('strength_snapshot'),
     aiClubIds: json<number[]>('ai_club_ids'),
     playbackState: json<unknown>('playback_state'),
+    /** Rounds: games played again share a series (the first game's id); round 1, 2, ... */
+    seriesId: integer('series_id'),
+    roundNumber: integer('round_number').notNull().default(1),
+    /** Transfer window and round progress once the seasons start (see games/round.ts). */
+    windowState: json<unknown>('window_state'),
     createdAt: timestampNow('created_at'),
   },
   (t) => [
     uniqueIndex('games_join_code_unique').on(t.joinCode),
+    index('games_series_idx').on(t.seriesId),
     index('games_status_idx').on(t.status),
   ],
 );
@@ -161,6 +170,10 @@ export const participants = pgTable(
     rerollsUsed: integer('rerolls_used').notNull().default(0),
     /** Set while the server drafts for a human: 'bot' (bot logic) or 'autopick' (queue, then best fit). */
     autoDraft: text('auto_draft', { enum: AUTO_DRAFT_MODES }),
+    /** The captain gets a rating boost in every match. */
+    captainPlayerId: integer('captain_player_id'),
+    /** Club Spin: the pick number on which this team used its one re-spin. */
+    respinPick: integer('respin_pick'),
   },
   (t) => [
     uniqueIndex('participants_game_team_name_unique').on(t.gameId, t.teamName),
@@ -208,6 +221,51 @@ export const queueItems = pgTable(
   (t) => [primaryKey({ name: 'queue_items_pk', columns: [t.participantId, t.playerId] })],
 );
 
+/** Transfers and trades after the draft. A team's current XI is its draft picks with these applied in order. */
+export const rosterMoves = pgTable(
+  'roster_moves',
+  {
+    id: id(),
+    gameId: integer('game_id')
+      .notNull()
+      .references(() => games.id, { onDelete: 'cascade' }),
+    participantId: integer('participant_id')
+      .notNull()
+      .references(() => participants.id, { onDelete: 'cascade' }),
+    slotKey: text('slot_key').notNull(),
+    outPlayerId: integer('out_player_id').notNull(),
+    inPlayerId: integer('in_player_id').notNull(),
+    kind: text('kind', { enum: ROSTER_MOVE_KINDS }).notNull(),
+    /** Which window: 'preseason' (after the draft), 'mini' (mid-season) or 'big' (between seasons). */
+    windowKind: text('window_kind', { enum: WINDOW_KINDS }).notNull(),
+    seasonNumber: integer('season_number').notNull(),
+    createdAt: timestampNow('created_at'),
+  },
+  (t) => [index('roster_moves_game_idx').on(t.gameId)],
+);
+
+export const trades = pgTable(
+  'trades',
+  {
+    id: id(),
+    gameId: integer('game_id')
+      .notNull()
+      .references(() => games.id, { onDelete: 'cascade' }),
+    fromParticipantId: integer('from_participant_id')
+      .notNull()
+      .references(() => participants.id, { onDelete: 'cascade' }),
+    toParticipantId: integer('to_participant_id')
+      .notNull()
+      .references(() => participants.id, { onDelete: 'cascade' }),
+    offerPlayerId: integer('offer_player_id').notNull(),
+    requestPlayerId: integer('request_player_id').notNull(),
+    status: text('status', { enum: TRADE_STATUSES }).notNull().default('pending'),
+    createdAt: timestampNow('created_at'),
+    respondedAt: timestampTz('responded_at'),
+  },
+  (t) => [index('trades_game_idx').on(t.gameId)],
+);
+
 export const seasons = pgTable(
   'seasons',
   {
@@ -219,6 +277,8 @@ export const seasons = pgTable(
     seed: seedColumn('seed').notNull(),
     status: text('status', { enum: SEASON_STATUSES }).notNull().default('pending'),
     parametersSnapshot: json<Record<string, unknown>>('parameters_snapshot').notNull(),
+    /** The teams as they played the first half, so the second half can be re-simulated after the mid-season window. */
+    inputsSnapshot: json<unknown>('inputs_snapshot'),
     championSeasonTeamId: integer('champion_season_team_id').references(
       (): AnyPgColumn => seasonTeams.id,
       { onDelete: 'set null' },

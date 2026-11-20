@@ -72,7 +72,17 @@ export interface SeasonOptions {
   params?: Partial<SimParams>;
   /** "fast" skips events, player stats and per-matchday tables (used by Monte Carlo). Scores are identical. */
   detail?: 'full' | 'fast';
+  /** Stop after this matchday, e.g. the first half before a mid-season transfer window. */
+  lastMatchday?: number;
+  /**
+   * Squads change from this matchday on (after a mid-season transfer window). Earlier matchdays
+   * are identical to a run without changes, because every random draw is keyed by matchday.
+   */
+  changes?: { fromMatchday: number; teams: readonly SeasonTeamInput[] };
 }
+
+/** Matchdays in the first half of a 20-team season; the mid-season window opens after it. */
+export const HALF_SEASON_MATCHDAYS = 19;
 
 export const INJURY_CHANCE = 0.01;
 export const INJURY_MIN_MATCHES = 1;
@@ -92,9 +102,14 @@ export function simulateSeason(inputs: readonly SeasonTeamInput[], options: Seas
   const params = resolveParams(options.params);
   const full = (options.detail ?? 'full') === 'full';
   const seed = options.seed >>> 0;
-  const teams = rateTeams(inputs, params);
-  const byId = new Map(teams.map((t) => [t.id, t]));
-  const league = leagueAverages(teams.map((t) => t.rating));
+  const firstTeams = rateTeams(inputs, params);
+  const laterTeams = options.changes ? rateTeams(options.changes.teams, params) : null;
+  const changeFrom = options.changes?.fromMatchday ?? Number.POSITIVE_INFINITY;
+  const firstById = new Map(firstTeams.map((t) => [t.id, t]));
+  const laterById = laterTeams ? new Map(laterTeams.map((t) => [t.id, t])) : firstById;
+  const firstLeague = leagueAverages(firstTeams.map((t) => t.rating));
+  const laterLeague = laterTeams ? leagueAverages(laterTeams.map((t) => t.rating)) : firstLeague;
+  const teams = laterTeams ?? firstTeams;
   const schedule = generateFixtures(
     teams.map((t) => t.id),
     seed,
@@ -150,9 +165,11 @@ export function simulateSeason(inputs: readonly SeasonTeamInput[], options: Seas
   const fixtures: PlayedFixture[] = [];
   const standings: StandingRow[][] = [];
   const summary: SeasonSummary = { matches: 0, goals: 0, homeWins: 0, draws: 0, awayWins: 0 };
-  const lastMatchday = schedule.reduce((m, f) => Math.max(m, f.matchday), 0);
+  const lastMatchday = Math.min(options.lastMatchday ?? Number.POSITIVE_INFINITY, schedule.reduce((m, f) => Math.max(m, f.matchday), 0));
 
   for (let md = 1; md <= lastMatchday; md++) {
+    const byId = md >= changeFrom ? laterById : firstById;
+    const league = md >= changeFrom ? laterLeague : firstLeague;
     for (const f of schedule.filter((x) => x.matchday === md)) {
       const home = byId.get(f.homeTeamId)!;
       const away = byId.get(f.awayTeamId)!;
