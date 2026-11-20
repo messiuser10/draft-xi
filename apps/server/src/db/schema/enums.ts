@@ -28,3 +28,6 @@ export type SeasonTeamKind = (typeof SEASON_TEAM_KINDS)[number];
 
 export const MATCH_EVENT_TYPES = ['goal', 'assist', 'yellow', 'red'] as const;
 export type MatchEventType = (typeof MATCH_EVENT_TYPES)[number];
+
+export const AUTO_DRAFT_MODES = ['bot', 'autopick'] as const;
+export type AutoDraftMode = (typeof AUTO_DRAFT_MODES)[number];

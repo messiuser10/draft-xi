@@ -62,6 +62,8 @@ const SETTINGS = {
     }),
     default: DEFAULT_SIM_PARAMS,
   },
+  /** Start the season automatically 10 seconds after the draft ends. */
+  'season.autoStart': { schema: z.boolean(), default: false },
   'registrations.open': { schema: z.boolean(), default: true },
   'lobbies.publicEnabled': { schema: z.boolean(), default: true },
   'profanity.words': { schema: z.array(z.string().min(2)), default: DEFAULT_PROFANITY },

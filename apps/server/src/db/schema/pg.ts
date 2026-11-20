@@ -20,6 +20,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import {
+  AUTO_DRAFT_MODES,
   BOT_LEVELS,
   GAME_STATUSES,
   MATCH_EVENT_TYPES,
@@ -124,6 +125,8 @@ export const games = pgTable(
       { onDelete: 'set null' },
     ),
     pickDeadline: timestampTz('pick_deadline'),
+    /** While paused: milliseconds that were left on the pick clock. */
+    pausedRemainingMs: integer('paused_remaining_ms'),
     strengthSnapshot: json<unknown>('strength_snapshot'),
     aiClubIds: json<number[]>('ai_club_ids'),
     playbackState: json<unknown>('playback_state'),
@@ -153,6 +156,10 @@ export const participants = pgTable(
     botLevel: text('bot_level', { enum: BOT_LEVELS }),
     isConnected: boolean('is_connected').notNull().default(false),
     isSpectator: boolean('is_spectator').notNull().default(false),
+    /** Pack Pick rerolls used this draft. */
+    rerollsUsed: integer('rerolls_used').notNull().default(0),
+    /** Set while the server drafts for a human: 'bot' (bot logic) or 'autopick' (queue, then best fit). */
+    autoDraft: text('auto_draft', { enum: AUTO_DRAFT_MODES }),
   },
   (t) => [
     uniqueIndex('participants_game_team_name_unique').on(t.gameId, t.teamName),

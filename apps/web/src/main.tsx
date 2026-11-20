@@ -5,6 +5,9 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 import { Layout } from './components/Layout';
 import { CreatePage } from './pages/Create';
 import { DraftPage } from './pages/Draft';
+import { LeaguePage } from './pages/League';
+import { RevealPage } from './pages/Reveal';
+import { SeasonPage } from './pages/Season';
 import { HomePage } from './pages/Home';
 import { HowToPlayPage } from './pages/HowToPlay';
 import { LobbyPage } from './pages/Lobby';
@@ -28,6 +31,9 @@ const router = createBrowserRouter([
       { path: '/solo', element: <SoloPage /> },
       { path: '/lobby/:code', element: <LobbyPage /> },
       { path: '/draft/:code', element: <DraftPage /> },
+      { path: '/reveal/:code', element: <RevealPage /> },
+      { path: '/season/:code', element: <SeasonPage /> },
+      { path: '/league/:code', element: <LeaguePage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

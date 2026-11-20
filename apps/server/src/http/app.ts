@@ -14,10 +14,13 @@ import type { AppConfig } from '../config';
 import type { ApiErrorBody } from '../contracts';
 import type { Database } from '../db/database';
 import { AppError } from '../errors';
-import { GameService } from '../games/service';
+import { DraftService } from '../games/draft';
+import { SeasonService } from '../games/season';
+import { GameService, NULL_HUB } from '../games/service';
 import { createRealtime } from '../realtime/socket';
 import { registerAdminRoutes } from './routes/admin';
 import { registerAuthRoutes } from './routes/auth';
+import { registerDraftRoutes } from './routes/draft';
 import { registerGameRoutes } from './routes/games';
 
 declare module 'fastify' {
@@ -31,6 +34,8 @@ export interface ServerContext {
   database: Database;
   auth: AuthService;
   games: GameService;
+  draft: DraftService;
+  seasons: SeasonService;
   /** Sets or clears the session cookie. */
   setSession(reply: FastifyReply, token: string | null): void;
 }
@@ -63,12 +68,28 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
     ...(options.bcryptCost === undefined ? {} : { bcryptCost: options.bcryptCost }),
   });
   const games = new GameService(database, undefined, { countdownSeconds: config.START_COUNTDOWN_SECONDS });
+  const draft = new DraftService(database, NULL_HUB, {
+    botDelayMs: config.BOT_PICK_DELAY_MS,
+    disconnectGraceMs: config.DISCONNECT_GRACE_SECONDS * 1000,
+    autoStartSeasonMs: 10_000,
+  });
+  const seasons = new SeasonService(database, NULL_HUB, draft);
+  games.setExtensions({
+    snapshotExtras: async (game, parts, viewer) => ({
+      draft: await draft.draftView(game, parts, viewer),
+      ...(await seasons.snapshotExtras(game)),
+    }),
+    connectionChanged: (gameId, participantId, connected) => draft.connectionChanged(gameId, participantId, connected),
+    draftStarted: (gameId) => draft.schedule(gameId),
+  });
 
   const ctx: ServerContext = {
     config,
     database,
     auth,
     games,
+    draft,
+    seasons,
     setSession(reply, token) {
       if (token === null) {
         void reply.clearCookie(SESSION_COOKIE, { path: '/' });
@@ -110,6 +131,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
   app.get('/api/health', () => ({ ok: true }));
   registerAuthRoutes(app, ctx, { rateLimit: options.authRateLimit ?? 20 });
   registerGameRoutes(app, ctx);
+  registerDraftRoutes(app, ctx);
   registerAdminRoutes(app, ctx);
 
   // Production: serve the built web app, with client-side routing falling back to index.html.
@@ -131,12 +153,15 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
   await app.ready();
   const { io, hub } = createRealtime(app.server, auth, games, (header) => app.parseCookie(header));
   games.setHub(hub);
+  draft.setHub(hub);
+  seasons.setHub(hub);
 
   return {
     app,
     ctx,
     close: async () => {
       games.dispose();
+      draft.dispose();
       io.disconnectSockets(true);
       await app.close();
       await io.close().catch(() => undefined);

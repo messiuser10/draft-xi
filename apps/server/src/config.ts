@@ -18,6 +18,10 @@ const envSchema = z.object({
   COOKIE_SECURE: booleanish.optional(),
   /** Seconds between the host pressing Start and the draft starting. */
   START_COUNTDOWN_SECONDS: z.coerce.number().min(0).max(60).default(5),
+  /** Milliseconds a bot waits before picking. */
+  BOT_PICK_DELAY_MS: z.coerce.number().int().min(0).max(30_000).default(1500),
+  /** Seconds a human may be disconnected during a draft before the host's policy applies. */
+  DISCONNECT_GRACE_SECONDS: z.coerce.number().min(0).max(3600).default(60),
   /** Directory of the built web app to serve (production). */
   WEB_DIST: z.string().optional(),
 });

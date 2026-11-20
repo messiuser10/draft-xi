@@ -27,6 +27,8 @@ interface SocketData {
   user: AuthUser | null;
   /** Games this socket watches, by id. */
   games: Set<number>;
+  /** Subscribe and unsubscribe run one at a time per socket, so a quick unsubscribe/subscribe pair cannot interleave. */
+  queue: Promise<void>;
 }
 
 type IoServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
@@ -54,6 +56,7 @@ export function createRealtime(
       .then((user) => {
         socket.data.user = user;
         socket.data.games = new Set();
+        socket.data.queue = Promise.resolve();
         next();
       })
       .catch((err: unknown) => next(err instanceof Error ? err : new Error('Auth failed')));
@@ -63,9 +66,13 @@ export function createRealtime(
     socket.emit('game:snapshot', await games.snapshot(gameId, socket.data.user));
   };
 
+  const enqueue = (socket: IoSocket, task: () => Promise<void>) => {
+    socket.data.queue = socket.data.queue.then(task).catch(() => undefined);
+  };
+
   io.on('connection', (socket) => {
     socket.on('game:subscribe', (rawCode, ack) => {
-      void (async () => {
+      enqueue(socket, async () => {
         try {
           const code = joinCodeSchema.parse(rawCode);
           const game = await games.getByCode(code);
@@ -79,18 +86,18 @@ export function createRealtime(
         } catch (err) {
           ack?.({ ok: false, error: errorOf(err) });
         }
-      })();
+      });
     });
 
     socket.on('game:unsubscribe', (rawCode) => {
-      void (async () => {
+      enqueue(socket, async () => {
         const parsed = joinCodeSchema.safeParse(rawCode);
         if (!parsed.success) return;
         const game = await games.getByCode(parsed.data).catch(() => null);
         if (!game || !socket.data.games.delete(game.id)) return;
         await socket.leave(room(game.id));
         await games.trackConnection(game.id, socket.data.user, -1);
-      })();
+      });
     });
 
     socket.on('time:sync', (ack) => {

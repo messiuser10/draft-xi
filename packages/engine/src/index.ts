@@ -18,3 +18,4 @@ export * from './league';
 export * from './awards';
 export * from './grades';
 export * from './pool';
+export * from './bots';

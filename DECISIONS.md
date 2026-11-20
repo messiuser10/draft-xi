@@ -89,3 +89,37 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - Database code is written once, against the SQLite types. On Postgres the same Drizzle calls run on the Postgres db and tables. SQLite transactions are serialised by a mutex and use BEGIN IMMEDIATE. Inside a transaction, code only queries through the transaction handle.
 - The web app uses Barlow Condensed (headings) and Inter (body) from Google Fonts, falling back to system fonts.
 - Light and dark mode: dark by default; the choice is remembered in localStorage.
+
+## M3: draft
+
+- Picks are checked in this order: draft running, player in the pool, player not taken, your turn, turn not moved on, slot exists and is empty, position fits, club cap, Pack Pick options. A taken player gives "Someone just drafted that player, pick another" and the turn stays with the picker.
+- A pick is one transaction: insert the pick, then advance the game only if `current_pick_number` still equals the pick being made. Unique indexes on (game, player) and (game, pick number) back this up, so two simultaneous picks can never both succeed on either database.
+- New columns (not in the spec's model): `games.paused_remaining_ms` (clock left while paused), `participants.rerolls_used` (Pack Pick) and `participants.auto_draft` ('bot' or 'autopick' while the server drafts for a human).
+- Timers live in memory but the deadline is in `games.pick_deadline`; on boot the server re-arms every running draft from it. A deadline that already passed fires immediately.
+- Timer expiry, Skip turn and End draft early all use the same auto-pick: queue first (first queued player who is available and fits), otherwise the best player for the open slot with the fewest fitting players left. These picks are flagged "auto". Bot picks are not flagged.
+- Bots wait 1.5 seconds before picking (`BOT_PICK_DELAY_MS`). Easy takes one of the five best fitting players at random. Medium scores overall plus 4 times the chemistry the player would add. Hard adds a bonus for slot types where fewer than three fitting players remain per team that still needs one.
+- Pack Pick options are seeded from the game seed, the pick number, the team and its reroll count, so a refresh shows the same five players. Each team gets 1 reroll per draft. Bots and auto-picks are not limited to the pack.
+- With strict positions off, anyone can play any outfield slot (scored with the out-of-position penalty), but keepers only play in goal and outfielders never do.
+- Disconnects: after 60 seconds offline (`DISCONNECT_GRACE_SECONDS`) during the draft, the host's choice applies: 'autopick' (default) or 'bot' (a Medium bot drafts for them). The choice is a game setting the host can change during the draft. Reconnecting hands the team back, including after "Replace with bot".
+- Undo removes the last pick and puts that team back on the clock with a fresh timer. It also works after the draft completes, until the season starts.
+- Pause stores the clock's remaining time and clears the deadline; Resume sets a new deadline from it. "+30 seconds" works while paused too.
+- Host draft controls are also available to admins. All of them are written to the audit log.
+- Admin setting `season.autoStart` (default off) starts the season 10 seconds after the draft completes.
+- The kickoff screen is shown once at the top of the draft room until the user dismisses it (remembered per game for the browser session).
+- Team Reveal's draft grade preview uses the team's strength rank among all 20 teams, as computed by the engine from the drafted XI.
+- Socket subscribe and unsubscribe are processed one at a time per socket; otherwise a quick unsubscribe/subscribe pair (React StrictMode, hot reload) could leave a socket outside its game room.
+
+## M4: season
+
+- Starting the season (and Run It Back) first flips the game status in a conditional update, so a double click or the auto-start racing the host simulates only once. On failure the status is restored.
+- Season 1 uses the game seed; Run It Back and Multi-season (2 to 10) use fresh random seeds and are numbered 2, 3 and so on. All seasons are kept and can be replayed.
+- After the season, the game status is `completed`. Run It Back is allowed from `completed`.
+- Human teams in the season use non-strict lineups, so a team whose drafted player was later deactivated still plays him.
+- `season_teams.lineup` stores `{ slots: [...] }` with each slot's player id, name, overall, effective overall, club, nationality and flags, so old seasons render even if players change.
+- Player season stats are stored only for real players; Academy Reserves appear in match events with no player id.
+- Playback state is `{ seasonNumber, matchday, playing, speed, anchorAt }`. Clients compute the live matchday from it (4 seconds per matchday at 1x), so the server sends one event per host action rather than a tick per matchday. Instant jumps to matchday 38.
+- In own-pace mode the same state lives only in each browser.
+- Key Moments are computed when a season is read: hat-tricks, wins by 4 or more, upsets (a team at least six places lower in the previous matchday's table beating a top-five side), new leaders and human-versus-human games.
+- Expected Strength runs 1,000 seasons in the server process on request and caches the result in memory per game.
+- The League Teams page shows the latest season's teams once a season exists; during the draft it builds them from the current picks, with Academy Reserves in empty slots.
+- Table colour bands use fixed defaults (1st, 2nd to 4th, 5th to 6th, 18th to 20th). Renaming or switching them off arrives with the admin settings (M6).

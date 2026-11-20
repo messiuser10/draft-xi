@@ -8,6 +8,9 @@ import {
 } from '../contracts';
 import type { Database } from '../db/database';
 
+/** Pack Pick rerolls per draft (spec section 8). */
+export const PACK_REROLLS = 1;
+
 export type GameRow = Database['t']['games']['$inferSelect'];
 export type ParticipantRow = Database['t']['participants']['$inferSelect'];
 
@@ -32,6 +35,7 @@ export function toGameView(game: GameRow): GameView {
     currentPickNumber: game.currentPickNumber,
     currentParticipantId: game.currentParticipantId,
     pickDeadline: game.pickDeadline?.toISOString() ?? null,
+    pausedRemainingMs: game.pausedRemainingMs,
     createdAt: game.createdAt.toISOString(),
   };
 }
@@ -51,6 +55,8 @@ export function toParticipantView(p: ParticipantRow, game: GameRow, displayName:
     botLevel: p.botLevel,
     isConnected: p.isBot || p.isConnected,
     isHost: p.userId !== null && p.userId === game.hostUserId,
+    autoDraft: p.autoDraft,
+    rerollsLeft: Math.max(0, PACK_REROLLS - p.rerollsUsed),
   };
 }
 

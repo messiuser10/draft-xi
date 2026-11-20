@@ -62,6 +62,8 @@ describe('loadConfig', () => {
       HOST: '127.0.0.1',
       PORT: 3000,
       START_COUNTDOWN_SECONDS: 5,
+      BOT_PICK_DELAY_MS: 1500,
+      DISCONNECT_GRACE_SECONDS: 60,
       COOKIE_SECURE: false,
     });
   });

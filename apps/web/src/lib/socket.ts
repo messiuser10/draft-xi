@@ -45,6 +45,20 @@ function subscribe(code: string): void {
   });
 }
 
+/** Asks the server for a fresh snapshot of a game this page already watches. */
+export function resubscribe(code: string): void {
+  if (subscriptions.has(code)) subscribe(code);
+}
+
+/** Lets a page update its own copy of the draft (queue, pack) after a REST call. */
+export function patchDraft(code: string, patch: Partial<NonNullable<GameSnapshot['draft']>>): void {
+  useGames.setState((s) => {
+    const snap = s.byCode[code];
+    if (!snap?.draft) return s;
+    return { byCode: { ...s.byCode, [code]: { ...snap, draft: { ...snap.draft, ...patch } } } };
+  });
+}
+
 async function syncClock(): Promise<void> {
   const s = getSocket();
   const sentAt = Date.now();
@@ -122,6 +136,21 @@ export const useGames = create<GamesState>((set) => ({
         case 'pool:health':
           next.poolHealth = event.poolHealth;
           next.aiClubCount = event.aiClubCount;
+          break;
+        case 'draft:pick':
+          next.game = event.game;
+          if (snap.draft && !snap.draft.picks.some((p) => p.pickNumber === event.pick.pickNumber)) {
+            next.draft = { ...snap.draft, picks: [...snap.draft.picks, event.pick], pack: null };
+          }
+          useToasts.getState().push(`${event.teamName} drafted ${event.playerName}${event.pick.autoPicked ? ' (auto-pick)' : ''}`);
+          break;
+        case 'draft:undo':
+          next.game = event.game;
+          if (snap.draft) next.draft = { ...snap.draft, picks: snap.draft.picks.filter((p) => p.pickNumber < event.pickNumber), pack: null };
+          useToasts.getState().push(`The host undid pick ${event.pickNumber}`);
+          break;
+        case 'playback:updated':
+          next.playback = event.playback;
           break;
       }
       return { byCode: { ...s.byCode, [code]: next } };

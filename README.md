@@ -13,8 +13,10 @@ Unofficial fan game, not affiliated with any club, league or player.
 | M0 | Monorepo, TypeScript, lint, tests, database schema and migrations, seed and data validation | Done |
 | M1 | Engine: formations, ratings, AI lineups, fixtures, match and season simulation, Monte Carlo, awards, draft grades, `npm run sim` | Done |
 | M2 | Server foundation: accounts, guests, admin roles, lobby, host controls, Socket.IO, start-game flow; web app with home, sign-in, create, lobby and kickoff | Done |
-| M3 | Draft room, pick validation, timers, auto-pick, bots | Next |
-| M4 to M7 | Season, results, admin, polish | Not started |
+| M3 | Draft room: snake, linear and Pack Pick modes, pick validation in transactions, server timers, auto-pick, queue, bots, host controls, disconnect handling, Team Reveal | Done |
+| M4 | Season: stored simulation, synchronized or own-pace playback, matchday results, live table, match ticker, key moments, League Teams, Run It Back, multi-season, Expected Strength (Monte Carlo) | Done |
+| M5 | Results: awards, draft grades, team pages, profiles, Hall of Fame | Next |
+| M6 to M7 | Admin, polish | Not started |
 
 ## Requirements
 
@@ -63,6 +65,8 @@ Copy `.env.example` to `.env` to override defaults. Real environment variables t
 | `ADMIN_USERNAME` | (none) | Whoever registers with this username becomes an admin (even if registrations are closed). Admins can promote other users. |
 | `COOKIE_SECURE` | `true` in production, else `false` | Send the session cookie only over HTTPS. Set `false` to test a production build over plain HTTP. |
 | `START_COUNTDOWN_SECONDS` | `5` | Countdown between the host pressing Start and the draft opening. |
+| `BOT_PICK_DELAY_MS` | `1500` | How long a bot (or a team on auto-draft) waits before picking. |
+| `DISCONNECT_GRACE_SECONDS` | `60` | How long a human can be offline during the draft before the host's choice (auto-pick or bot) applies. |
 | `WEB_DIST` | `apps/web/dist` in production | Folder of built web assets the server serves. |
 | `VITE_API_TARGET` | `http://127.0.0.1:3000` | Development only: where the Vite dev server proxies API and socket requests. |
 
@@ -75,14 +79,15 @@ packages/engine     Pure, deterministic game logic, no I/O: positions and format
 apps/server         Fastify API, Socket.IO, database, data loading
   src/contracts.ts  Zod input schemas and response types shared with the web app
   src/auth/         Accounts, guest sessions, roles
-  src/games/        Game lifecycle: lobby, host controls, start flow
+  src/games/        Lobby and start flow (service.ts), the draft (draft.ts), seasons and playback (season.ts)
   src/http/         Fastify app and routes (/api/auth, /api/games, /api/admin)
   src/realtime/     Socket.IO: per-game rooms, snapshots and events
   src/settings/     Site settings (app_settings table) and the team-name filter
   src/db/           One query API over SQLite and Postgres (database.ts) and both schemas
   drizzle/          Generated migrations: sqlite/ and pg/
   src/data/         Reading, validating and seeding the data files
-apps/web            React + Vite + Tailwind web app: home, sign-in, create, solo, lobby, kickoff
+apps/web            React + Vite + Tailwind web app: home, sign-in, create, solo, lobby, draft room,
+                    team reveal, season playback, League Teams
 data/               Owner-supplied seed data: players.seed.json, players.csv, clubs.json
 scripts/            CLI entry points: seed, validate-data, migrate, sim
 ```
@@ -134,6 +139,18 @@ limited to 20 requests per minute per IP.
 Socket.IO clients send `game:subscribe` with a join code and receive a full `game:snapshot`,
 then small `game:event`s. A client that reconnects subscribes again and gets a fresh snapshot.
 Anyone with the code can watch; the cookie, if present, identifies the viewer.
+
+Main endpoints (all under `/api`):
+
+| Area | Endpoints |
+| --- | --- |
+| Pool | `GET /pool` (clubs and every draftable player) |
+| Draft | `POST /games/:code/picks` `{ playerId, slotKey }`, `PUT /games/:code/queue` `{ playerIds }`, `GET /games/:code/pack`, `POST /games/:code/pack/reroll` |
+| Host draft controls | `POST /games/:code/draft/{pause,resume,skip,undo,extend,end,bot,disconnect-policy}` |
+| Season | `POST /games/:code/season` (start), `POST /games/:code/seasons` `{ count }` (Run It Back, multi-season), `GET /games/:code/seasons`, `GET /games/:code/seasons/:n`, `GET /games/:code/league`, `GET /games/:code/montecarlo?runs=1000`, `POST /games/:code/playback` `{ action, speed?, matchday?, seasonNumber? }` |
+
+Pick timers are stored in the database (`games.pick_deadline`) and re-armed when the server
+starts, so a restart mid-draft keeps the clock.
 
 ## Deploy
 

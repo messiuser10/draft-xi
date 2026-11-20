@@ -48,6 +48,8 @@ export const DRAFT_MODES = ['snake', 'linear', 'pack'] as const;
 export const VISIBILITIES = ['private', 'public'] as const;
 export const FORMATION_RULES = ['choose', 'forced'] as const;
 export const PLAYBACK_MODES = ['synchronized', 'own_pace'] as const;
+/** What happens to a human who stays disconnected for 60 seconds during the draft. */
+export const DISCONNECT_POLICIES = ['autopick', 'bot'] as const;
 export const HARD_MAX_HUMANS = 20;
 
 export const formationIdSchema = z.enum(FORMATION_IDS);
@@ -66,6 +68,7 @@ export const gameSettingsSchema = z.object({
   removeDraftedFromAi: z.boolean(),
   botsAllowed: z.boolean(),
   playbackMode: z.enum(PLAYBACK_MODES),
+  disconnectPolicy: z.enum(DISCONNECT_POLICIES),
 });
 export type GameSettings = z.infer<typeof gameSettingsSchema>;
 
@@ -81,6 +84,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   removeDraftedFromAi: true,
   botsAllowed: true,
   playbackMode: 'synchronized',
+  disconnectPolicy: 'autopick',
 };
 
 
@@ -151,6 +155,44 @@ export const pickOrderSchema = z.union([
 ]);
 export const startGameSchema = z.object({ force: z.boolean().optional() });
 export const chatSchema = z.object({ body: z.string().trim().min(1).max(300) });
+// ---------- Draft ----------
+
+export const pickSchema = z.object({
+  playerId: z.number().int().positive(),
+  slotKey: z.string().trim().min(1).max(8),
+});
+export const queueSchema = z.object({ playerIds: z.array(z.number().int().positive()).max(100) });
+export const extendTimerSchema = z.object({ seconds: z.number().int().min(5).max(300).default(30) });
+export const replaceWithBotSchema = z.object({ participantId: z.number().int().positive(), enabled: z.boolean().default(true) });
+export const disconnectPolicySchema = z.object({ policy: z.enum(DISCONNECT_POLICIES) });
+
+// ---------- Season ----------
+
+export const PLAYBACK_SPEEDS = [1, 2, 5] as const;
+export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];
+/** Milliseconds one matchday stays on screen at 1x. */
+export const MATCHDAY_MS = 4000;
+export const SEASON_MATCHDAYS = 38;
+
+/** Matchday a playback state shows at `nowMs` (server time). */
+export function playbackMatchday(state: PlaybackState, nowMs: number): number {
+  if (!state.playing) return state.matchday;
+  const elapsed = Math.max(0, nowMs - Date.parse(state.anchorAt));
+  return Math.min(SEASON_MATCHDAYS, state.matchday + Math.floor((elapsed * state.speed) / MATCHDAY_MS));
+}
+
+export const runSeasonsSchema = z.object({ count: z.number().int().min(1).max(10).default(1) });
+export const playbackSchema = z.object({
+  action: z.enum(['play', 'pause', 'speed', 'jump', 'end']),
+  speed: z.union([z.literal(1), z.literal(2), z.literal(5)]).optional(),
+  matchday: z.number().int().min(0).max(SEASON_MATCHDAYS).optional(),
+  seasonNumber: z.number().int().min(1).optional(),
+});
+export const monteCarloQuerySchema = z.object({
+  runs: z.coerce.number().int().min(10).max(1000).default(1000),
+  season: z.coerce.number().int().min(1).optional(),
+});
+
 export const joinCodeSchema = z
   .string()
   .trim()
@@ -182,6 +224,9 @@ export interface ParticipantView {
   botLevel: 'easy' | 'medium' | 'hard' | null;
   isConnected: boolean;
   isHost: boolean;
+  /** Set while the server drafts for this team. */
+  autoDraft: 'bot' | 'autopick' | null;
+  rerollsLeft: number;
 }
 
 export interface PoolHealthView {
@@ -211,6 +256,8 @@ export interface GameView {
   currentPickNumber: number;
   currentParticipantId: number | null;
   pickDeadline: string | null;
+  /** While paused: what was left on the pick clock. */
+  pausedRemainingMs: number | null;
   createdAt: string;
 }
 
@@ -228,6 +275,196 @@ export interface KickoffView {
   aiClubIds: number[];
 }
 
+export interface PickView {
+  pickNumber: number;
+  round: number;
+  participantId: number;
+  playerId: number;
+  slotKey: string;
+  autoPicked: boolean;
+  createdAt: string;
+}
+
+export interface DraftView {
+  totalPicks: number;
+  rounds: number;
+  picks: PickView[];
+  /** The viewer's own queue (player ids in order). Empty for spectators. */
+  myQueue: number[];
+  /** Pack Pick: the viewer's five options when they are on the clock. */
+  pack: number[] | null;
+}
+
+export interface PoolClubView {
+  id: number;
+  name: string;
+  shortName: string;
+  primaryColor: string;
+  secondaryColor: string;
+  strengthRating: number | null;
+}
+
+export interface PoolPlayerView {
+  id: number;
+  clubId: number;
+  name: string;
+  primaryPosition: string;
+  altPositions: string[];
+  overall: number;
+  nationality: string;
+}
+
+export interface PoolView {
+  clubs: PoolClubView[];
+  players: PoolPlayerView[];
+}
+
+export interface PlaybackState {
+  seasonNumber: number;
+  /** Matchday shown at `anchorAt` (0 = before kickoff). */
+  matchday: number;
+  playing: boolean;
+  speed: PlaybackSpeed;
+  anchorAt: string;
+}
+
+export interface SeasonListItem {
+  number: number;
+  seed: number;
+  championTeamId: number | null;
+  championName: string | null;
+  championIsHuman: boolean;
+  createdAt: string;
+}
+
+export interface LineupSlotView {
+  slotKey: string;
+  slotType: string;
+  x: number;
+  y: number;
+  playerId: number | null;
+  name: string;
+  overall: number;
+  effectiveOverall: number;
+  clubId: number | null;
+  nationality: string | null;
+  outOfPosition: boolean;
+  reserve: boolean;
+}
+
+export interface LeagueTeamView {
+  /** season_teams id, or "p<participantId>" / "ai:<clubId>" before a season exists. */
+  id: string;
+  kind: 'human' | 'ai';
+  participantId: number | null;
+  clubId: number | null;
+  name: string;
+  primaryColor: string;
+  secondaryColor: string;
+  monogram: string;
+  formation: string;
+  attack: number;
+  defense: number;
+  chemistry: number;
+  overall: number;
+  strength: number;
+  rank: number;
+  lineup: LineupSlotView[];
+}
+
+export interface LeagueView {
+  teams: LeagueTeamView[];
+  /** "draft" while built from current picks, "season" once a season stored the teams. */
+  source: 'draft' | 'season';
+}
+
+export interface MatchEventView {
+  minute: number;
+  type: 'goal' | 'assist' | 'yellow' | 'red';
+  teamId: string;
+  playerId: number | null;
+  playerName: string;
+}
+
+export interface FixtureView {
+  id: number;
+  matchday: number;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeGoals: number;
+  awayGoals: number;
+  events: MatchEventView[];
+}
+
+export interface StandingView {
+  teamId: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+  position: number;
+  form: string;
+}
+
+export interface KeyMomentView {
+  matchday: number;
+  kind: 'hat_trick' | 'big_win' | 'upset' | 'new_leader' | 'human_derby';
+  text: string;
+  fixtureId: number | null;
+  teamIds: string[];
+}
+
+export interface PlayerStatView {
+  playerId: number;
+  teamId: string;
+  name: string;
+  appearances: number;
+  goals: number;
+  assists: number;
+  cleanSheets: number;
+  avgRating: number;
+}
+
+export interface SeasonView {
+  number: number;
+  seed: number;
+  championTeamId: string | null;
+  teams: LeagueTeamView[];
+  fixtures: FixtureView[];
+  /** standings[i] is the table after matchday i + 1. */
+  standings: StandingView[][];
+  keyMoments: KeyMomentView[];
+  playerStats: PlayerStatView[];
+}
+
+export interface TitlesRow {
+  name: string;
+  kind: 'human' | 'ai';
+  titles: number;
+  avgPosition: number;
+  avgPoints: number;
+}
+
+export interface MonteCarloView {
+  runs: number;
+  rows: {
+    teamId: string;
+    name: string;
+    kind: 'human' | 'ai';
+    avgPoints: number;
+    avgPosition: number;
+    titleChance: number;
+    top4Chance: number;
+    bottom3Chance: number;
+  }[];
+  goalsPerMatch: number;
+  homeWinRate: number;
+}
+
 export interface GameSnapshot {
   game: GameView;
   participants: ParticipantView[];
@@ -236,6 +473,9 @@ export interface GameSnapshot {
   /** How many AI clubs will join: 20 minus the number of drafting teams. */
   aiClubCount: number;
   kickoff: KickoffView | null;
+  draft: DraftView | null;
+  seasons: SeasonListItem[];
+  playback: PlaybackState | null;
   chat: ChatMessageView[];
   /** Pending start countdown, if any. */
   startsAt: string | null;
@@ -249,7 +489,10 @@ export type GameEvent =
   | { type: 'game:updated'; game: GameView }
   | { type: 'game:countdown'; startsAt: string | null; reason?: string }
   | { type: 'chat:message'; message: ChatMessageView }
-  | { type: 'pool:health'; poolHealth: PoolHealthView; aiClubCount: number };
+  | { type: 'pool:health'; poolHealth: PoolHealthView; aiClubCount: number }
+  | { type: 'draft:pick'; pick: PickView; game: GameView; teamName: string; playerName: string }
+  | { type: 'draft:undo'; pickNumber: number; game: GameView }
+  | { type: 'playback:updated'; playback: PlaybackState };
 
 export interface PublicLobbyView {
   code: string;

@@ -58,6 +58,17 @@ export interface GameHub {
   resync(gameId: number): void;
 }
 
+/** Draft and season services plug into the snapshot, presence and start flow through this. */
+export interface GameExtensions {
+  snapshotExtras(
+    game: GameRow,
+    parts: readonly ParticipantRow[],
+    viewer: ParticipantRow | undefined,
+  ): Promise<Pick<GameSnapshot, 'draft' | 'seasons' | 'playback'>>;
+  connectionChanged(gameId: number, participantId: number, connected: boolean): Promise<void>;
+  draftStarted(gameId: number): Promise<void>;
+}
+
 export const NULL_HUB: GameHub = { emit: () => undefined, resync: () => undefined };
 
 /** Shape of `games.strength_snapshot`. */
@@ -129,8 +140,14 @@ export class GameService {
     private readonly options: GameServiceOptions = { countdownSeconds: 5 },
   ) {}
 
+  private extensions: GameExtensions | null = null;
+
   setHub(hub: GameHub): void {
     this.hub = hub;
+  }
+
+  setExtensions(extensions: GameExtensions): void {
+    this.extensions = extensions;
   }
 
   /** Stops pending countdowns (server shutdown, tests). */
@@ -199,6 +216,7 @@ export class GameService {
       .orderBy(desc(t.chatMessages.id))
       .limit(CHAT_HISTORY);
     const countdown = this.countdowns.get(gameId);
+    const extras = (await this.extensions?.snapshotExtras(game, parts, mine)) ?? { draft: null, seasons: [], playback: null };
     return {
       game: toGameView(game),
       participants,
@@ -211,6 +229,7 @@ export class GameService {
       poolHealth: this.poolHealthFor(game, parts, pool, await this.compatibility()),
       aiClubCount: Math.max(0, LEAGUE_SIZE - parts.length),
       kickoff: this.kickoffOf(game, pool),
+      ...extras,
       chat: chatRows.reverse().map(({ m, name }) => toChatView(m, name)),
       startsAt: countdown?.startsAt.toISOString() ?? null,
       serverTime: new Date().toISOString(),
@@ -587,6 +606,7 @@ export class GameService {
     });
     this.hub.emit(gameId, { type: 'game:countdown', startsAt: null });
     this.hub.resync(gameId);
+    await this.extensions?.draftStarted(gameId);
     return started;
   }
 
@@ -624,6 +644,7 @@ export class GameService {
     if (connected === p.isConnected) return;
     const [updated] = await db.update(t.participants).set({ isConnected: connected }).where(eq(t.participants.id, p.id)).returning();
     if (updated) await this.emitParticipant(await this.getById(gameId), updated, 'participant:updated', user.displayName);
+    await this.extensions?.connectionChanged(gameId, p.id, connected);
   }
 
   /** On boot nobody is connected yet. */

@@ -19,7 +19,7 @@ export async function startTestServer(open: () => DbHandle, env: Record<string, 
   await seedDatabase(handle, await loadDataset());
   const database = createDatabase(handle);
   await ensureAppSettings(database);
-  const config = loadConfig({ NODE_ENV: 'test', START_COUNTDOWN_SECONDS: '0.05', ADMIN_USERNAME: 'boss', ...env });
+  const config = loadConfig({ NODE_ENV: 'test', START_COUNTDOWN_SECONDS: '0.05', BOT_PICK_DELAY_MS: '5', DISCONNECT_GRACE_SECONDS: '0.1', ADMIN_USERNAME: 'boss', ...env });
   const server = await buildServer({ config, database, bcryptCost: 4, authRateLimit: 1000 });
   return {
     ...server,

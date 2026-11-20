@@ -15,6 +15,13 @@
       "when": 1795185695831,
       "tag": "0001_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1795189616957,
+      "tag": "0002_draft_state",
+      "breakpoints": true
     }
   ]
 }
