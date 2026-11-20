@@ -11,7 +11,12 @@ export interface SimParams {
   chemistry: boolean;
   injuries: boolean;
   points: { win: number; draw: number; loss: number };
+  /** Order of tiebreakers after points; a seeded draw always settles what is left. */
+  tiebreakers: TiebreakKey[];
 }
+
+export const TIEBREAK_KEYS = ['goalDifference', 'goalsFor', 'headToHead', 'wins'] as const;
+export type TiebreakKey = (typeof TIEBREAK_KEYS)[number];
 
 /**
  * Spec defaults, except baseGoals (1.35 -> 1.25) and sensitivity (0.05 -> 0.09), tuned so a
@@ -28,6 +33,7 @@ export const DEFAULT_SIM_PARAMS: Readonly<SimParams> = {
   chemistry: true,
   injuries: false,
   points: { win: 3, draw: 1, loss: 0 },
+  tiebreakers: ['goalDifference', 'goalsFor', 'headToHead'],
 };
 
 export function resolveParams(overrides: Partial<SimParams> = {}): SimParams {
@@ -35,5 +41,6 @@ export function resolveParams(overrides: Partial<SimParams> = {}): SimParams {
     ...DEFAULT_SIM_PARAMS,
     ...overrides,
     points: { ...DEFAULT_SIM_PARAMS.points, ...overrides.points },
+    tiebreakers: [...(overrides.tiebreakers ?? DEFAULT_SIM_PARAMS.tiebreakers)],
   };
 }

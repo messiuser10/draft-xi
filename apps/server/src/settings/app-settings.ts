@@ -8,6 +8,7 @@ import {
   FORMATION_IDS,
   POSITIONS,
   SLOT_TYPES,
+  TIEBREAK_KEYS,
 } from '@draft-xi/engine';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -59,6 +60,8 @@ const SETTINGS = {
       chemistry: z.boolean(),
       injuries: z.boolean(),
       points: z.object({ win: z.number(), draw: z.number(), loss: z.number() }),
+      // Optional so settings saved before tiebreakers existed stay valid.
+      tiebreakers: z.array(z.enum(TIEBREAK_KEYS)).max(TIEBREAK_KEYS.length).optional(),
     }),
     default: DEFAULT_SIM_PARAMS,
   },
@@ -67,6 +70,41 @@ const SETTINGS = {
   'registrations.open': { schema: z.boolean(), default: true },
   'lobbies.publicEnabled': { schema: z.boolean(), default: true },
   'profanity.words': { schema: z.array(z.string().min(2)), default: DEFAULT_PROFANITY },
+  /** How the AI clubs are chosen at the start of a game. */
+  'ai.selection': {
+    schema: z.object({ method: z.enum(['strength', 'manual', 'random']), manualClubIds: z.array(z.number().int().positive()) }),
+    default: { method: 'strength' as 'strength' | 'manual' | 'random', manualClubIds: [] as number[] },
+  },
+  /** Final table colour bands; positions are inclusive. */
+  'table.bands': {
+    schema: z.object({
+      enabled: z.boolean(),
+      bands: z
+        .array(
+          z.object({
+            label: z.string().min(1).max(30),
+            from: z.number().int().min(1).max(20),
+            to: z.number().int().min(1).max(20),
+            color: z.enum(['gold', 'green', 'blue', 'red', 'purple']),
+          }),
+        )
+        .max(8),
+    }),
+    default: {
+      enabled: true,
+      bands: [
+        { label: 'Champion', from: 1, to: 1, color: 'gold' as const },
+        { label: 'Top four', from: 2, to: 4, color: 'green' as const },
+        { label: 'Next tier', from: 5, to: 6, color: 'blue' as const },
+        { label: 'Bottom three', from: 18, to: 20, color: 'red' as const },
+      ],
+    },
+  },
+  /** While enabled, only admins can create games and a banner explains why. */
+  'site.maintenance': {
+    schema: z.object({ enabled: z.boolean(), message: z.string().max(300) }),
+    default: { enabled: false, message: 'Scheduled maintenance: new games are paused for a few minutes.' },
+  },
   // Empty string means no banner (JSON null would become SQL NULL on Postgres).
   'site.banner': { schema: z.string().max(300), default: '' },
 } as const;

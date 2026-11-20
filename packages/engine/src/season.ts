@@ -103,6 +103,7 @@ export function simulateSeason(inputs: readonly SeasonTeamInput[], options: Seas
     teams.map((t) => t.id),
     params.points,
     seed,
+    params.tiebreakers,
   );
 
   // Injury state: slotKey -> first team-match index the player is available again.

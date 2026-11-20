@@ -5,13 +5,11 @@
  */
 import { randomInt } from 'node:crypto';
 import {
-  computeClubStrengths,
   createRng,
   type FormationId,
   LEAGUE_SIZE,
   pickTurn,
   poolHealth,
-  selectAiClubIds,
 } from '@draft-xi/engine';
 import type { SlotCompatibility } from '@draft-xi/engine';
 import { and, desc, eq, inArray } from 'drizzle-orm';
@@ -41,6 +39,7 @@ import type { BotLevel } from '../db/schema/enums';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../errors';
 import { getSetting } from '../settings/app-settings';
 import { containsProfanity } from '../settings/profanity';
+import { aiSelection, chooseAiClubs, strengthsWithOverrides } from './ai-clubs';
 import { loadPool, type Pool } from './pool';
 import {
   byPickOrder,
@@ -244,6 +243,8 @@ export class GameService {
 
   async create(userIn: AuthUser | null, input: z.infer<typeof createGameSchema>): Promise<GameRow> {
     const user = requireUser(userIn);
+    const maintenance = await getSetting(this.database, 'site.maintenance');
+    if (maintenance.enabled && user.role !== 'admin') throw new AppError(503, 'maintenance', maintenance.message);
     const defaults = await getSetting(this.database, 'game.defaults');
     const settings = await this.resolveSettings({ ...defaults, ...input.settings }, 1);
     const team = await this.checkTeam(input.team, settings);
@@ -509,7 +510,7 @@ export class GameService {
 
   async cancel(code: string, userIn: AuthUser | null): Promise<void> {
     const game = await this.getByCode(code);
-    const user = this.requireHost(game, userIn, { allowAdmin: true });
+    const user = this.requireHost(game, userIn);
     if (game.status === 'completed' || game.status === 'cancelled') throw conflict('game_over', 'This game is already over');
     await this.cancelGame(game, user, 'host_cancelled');
   }
@@ -556,6 +557,8 @@ export class GameService {
     // (PGlite, SQLite) a query outside the transaction would wait for it to finish.
     const pool = await loadPool(this.database);
     const compatibility = await this.compatibility();
+    const selection = await aiSelection(this.database);
+    const seed = randomInt(1, 2 ** 31);
     const { t } = this.database;
     const started = await this.database.transaction(async (tx) => {
       const [game] = await tx.select().from(t.games).where(eq(t.games.id, gameId)).limit(1);
@@ -568,7 +571,7 @@ export class GameService {
       for (const [i, p] of parts.entries()) {
         if (p.pickOrder !== i + 1) await tx.update(t.participants).set({ pickOrder: i + 1 }).where(eq(t.participants.id, p.id));
       }
-      const strengths = computeClubStrengths(pool.engineClubs, pool.players);
+      const strengths = strengthsWithOverrides(pool);
       const snapshot: StrengthSnapshotEntry[] = strengths.map((s) => ({
         clubId: s.clubId,
         clubName: s.clubName,
@@ -578,14 +581,14 @@ export class GameService {
         formation: s.formation,
         rank: s.rank,
       }));
-      const aiClubIds = parts.length >= LEAGUE_SIZE ? [] : selectAiClubIds(strengths, parts.length);
+      const aiClubIds = chooseAiClubs(strengths, parts.length, selection, seed);
       const first = parts[pickTurn(1, parts.length, settings.draftMode).participantIndex];
       const now = Date.now();
       const [updated] = await tx
         .update(t.games)
         .set({
           status: 'drafting',
-          seed: randomInt(1, 2 ** 31),
+          seed,
           currentPickNumber: 1,
           currentParticipantId: first?.id ?? null,
           pickDeadline: settings.pickTimerSeconds === null ? null : new Date(now + settings.pickTimerSeconds * 1000),
@@ -673,10 +676,11 @@ export class GameService {
     return (p.userId !== null && names.get(p.userId)) || 'Player';
   }
 
-  private requireHost(game: GameRow, userIn: AuthUser | null, opts: { allowAdmin?: boolean } = {}): AuthUser {
+  private requireHost(game: GameRow, userIn: AuthUser | null): AuthUser {
     const user = requireUser(userIn);
     if (game.hostUserId === user.id) return user;
-    if (opts.allowAdmin && user.role === 'admin') return user;
+    // Admins can use every host control in any game (spec section 11, Games tab).
+    if (user.role === 'admin') return user;
     throw forbidden('Only the host can do that');
   }
 

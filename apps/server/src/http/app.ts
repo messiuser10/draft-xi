@@ -15,6 +15,7 @@ import type { ApiErrorBody } from '../contracts';
 import type { Database } from '../db/database';
 import { AppError } from '../errors';
 import { DraftService } from '../games/draft';
+import { AdminService } from '../admin/service';
 import { ResultsService } from '../games/results';
 import { SeasonService } from '../games/season';
 import { GameService, NULL_HUB } from '../games/service';
@@ -39,6 +40,7 @@ export interface ServerContext {
   draft: DraftService;
   seasons: SeasonService;
   results: ResultsService;
+  admin: AdminService;
   /** Sets or clears the session cookie. */
   setSession(reply: FastifyReply, token: string | null): void;
 }
@@ -78,6 +80,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
   });
   const seasons = new SeasonService(database, NULL_HUB, draft);
   const results = new ResultsService(database, seasons, draft, games, NULL_HUB);
+  const admin = new AdminService(database, games, draft, seasons, NULL_HUB);
   games.setExtensions({
     snapshotExtras: async (game, parts, viewer) => ({
       draft: await draft.draftView(game, parts, viewer),
@@ -95,6 +98,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
     draft,
     seasons,
     results,
+    admin,
     setSession(reply, token) {
       if (token === null) {
         void reply.clearCookie(SESSION_COOKIE, { path: '/' });
@@ -162,6 +166,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
   draft.setHub(hub);
   seasons.setHub(hub);
   results.setHub(hub);
+  admin.setHub(hub);
 
   return {
     app,

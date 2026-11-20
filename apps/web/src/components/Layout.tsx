@@ -34,6 +34,11 @@ export function Layout() {
 
   return (
     <div className="flex min-h-dvh flex-col overflow-x-clip">
+      {site?.maintenance.enabled ? (
+        <div className="bg-red-600 px-4 py-2 text-center text-sm font-semibold text-white" role="status">
+          {site.maintenance.message}
+        </div>
+      ) : null}
       {site?.banner ? (
         <div className="bg-gold-500 px-4 py-2 text-center text-sm font-semibold text-night-950">{site.banner}</div>
       ) : null}

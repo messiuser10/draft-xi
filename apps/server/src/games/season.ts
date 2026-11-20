@@ -379,6 +379,24 @@ export class SeasonService {
     return { inputs, meta };
   }
 
+  /** The 20 season inputs for a game as it stands (Simulation Lab). */
+  async teamsForGame(code: string): Promise<{ inputs: SeasonTeamInput[]; names: Map<string, string>; seed: number | null }> {
+    const game = await this.getByCode(code);
+    if (game.strengthSnapshot === null) throw conflict('not_started', 'That game has not started its draft');
+    const { db, t } = this.database;
+    const parts = await db.select().from(t.participants).where(eq(t.participants.gameId, game.id));
+    const picks = await this.draft.picksOf(db, game.id);
+    const pool = await loadPool(this.database);
+    const params = resolveParams(await getSetting(this.database, 'simulation.parameters'));
+    const { inputs, meta } = await this.buildTeams(game, parts, picks, pool, params);
+    return { inputs, names: new Map([...meta].map(([id, m]) => [id, m.name])), seed: game.seed };
+  }
+
+  /** Drops cached Expected Strength for a game (after a reset or re-run). */
+  forget(gameId: number): void {
+    for (const key of this.monteCarloCache.keys()) if (key.startsWith(`${gameId}:`)) this.monteCarloCache.delete(key);
+  }
+
   // ---------- Reads ----------
 
   async list(gameId: number): Promise<SeasonListItem[]> {

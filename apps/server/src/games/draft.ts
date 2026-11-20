@@ -106,6 +106,15 @@ export class DraftService {
     }
   }
 
+  /** Stops the turn and season timers of one game (it was deleted or reset). */
+  forget(gameId: number): void {
+    for (const map of [this.turnTimers, this.seasonTimers]) {
+      const timer = map.get(gameId);
+      if (timer) clearTimeout(timer);
+      map.delete(gameId);
+    }
+  }
+
   /** On boot: re-arm the timer of every draft in progress from its stored deadline. */
   async restore(): Promise<number> {
     const { db, t } = this.database;

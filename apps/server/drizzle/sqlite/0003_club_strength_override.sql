@@ -1,0 +1,1 @@
+ALTER TABLE `clubs` ADD `strength_override` real;

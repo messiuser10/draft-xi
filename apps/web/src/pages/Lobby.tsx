@@ -75,7 +75,7 @@ function Lobby({ snapshot }: { snapshot: GameSnapshot }) {
         </div>
         <aside className="grid min-w-0 grid-cols-1 content-start gap-6">
           <InvitePanel code={game.code} />
-          {me.isHost ? <HostControls snapshot={snapshot} /> : null}
+          {me.isHost || me.isAdmin ? <HostControls snapshot={snapshot} /> : null}
           <PoolHealth snapshot={snapshot} />
           <SettingsCard snapshot={snapshot} />
         </aside>
@@ -98,7 +98,7 @@ function Participants({ snapshot }: { snapshot: GameSnapshot }) {
     <section className="card p-5">
       <div className="flex items-center gap-2">
         <h2 className="display text-xl">Teams · pick order</h2>
-        {me.isHost ? (
+        {me.isHost || me.isAdmin ? (
           <button type="button" className="btn-ghost ml-auto text-sm" disabled={busy} onClick={() => void run(`/api/games/${game.code}/order`, 'POST', { randomize: true })}>
             Randomize
           </button>
@@ -123,7 +123,7 @@ function Participants({ snapshot }: { snapshot: GameSnapshot }) {
             <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${p.isReady ? 'bg-pitch-500/20 text-pitch-600 dark:text-pitch-400' : 'bg-slate-200 text-slate-600 dark:bg-night-700 dark:text-slate-300'}`}>
               {p.isReady ? 'Ready' : 'Not ready'}
             </span>
-            {me.isHost ? (
+            {me.isHost || me.isAdmin ? (
               <div className="flex gap-1">
                 <button type="button" className="btn-ghost min-h-8 px-2 text-xs" aria-label={`Move ${p.teamName} up`} disabled={busy || i === 0} onClick={() => move(i, -1)}>
                   ▲
@@ -384,7 +384,7 @@ function SettingsCard({ snapshot }: { snapshot: GameSnapshot }) {
     <section className="card p-5">
       <div className="flex items-center">
         <h2 className="display text-xl">Settings</h2>
-        {me.isHost ? (
+        {me.isHost || me.isAdmin ? (
           <button
             type="button"
             className="btn-ghost ml-auto text-sm"

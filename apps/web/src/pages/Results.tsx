@@ -10,6 +10,7 @@ import { DISCLAIMER } from '../components/Layout';
 import { useAction } from '../lib/actions';
 import { api } from '../lib/api';
 import { usePool } from '../lib/pool';
+import { BAND_BORDER, bandFor, DEFAULT_BANDS, useSite } from '../lib/session';
 import { useGame, useRematch, useToasts } from '../lib/socket';
 
 export function useResults(code: string, season: number | null) {
@@ -135,8 +136,12 @@ export function ResultsPage() {
 }
 
 function FinalTable({ results, teams, code }: { results: ResultsView; teams: Map<string, LeagueTeamView>; code: string }) {
-  const band = (pos: number) =>
-    pos === 1 ? 'border-l-gold-500' : pos <= 4 ? 'border-l-pitch-500' : pos <= 6 ? 'border-l-sky-500' : pos >= 18 ? 'border-l-red-500' : 'border-l-transparent';
+  const { data: site } = useSite();
+  const band = (pos: number) => {
+    const b = bandFor(site?.tableBands, pos);
+    return b ? BAND_BORDER[b.color] : 'border-l-transparent';
+  };
+  const legend = site?.tableBands.enabled === false ? [] : (site?.tableBands.bands ?? DEFAULT_BANDS.bands);
   return (
     <section className="card overflow-x-auto p-4">
       <h2 className="display text-xl">Final table</h2>
@@ -179,7 +184,15 @@ function FinalTable({ results, teams, code }: { results: ResultsView; teams: Map
           })}
         </tbody>
       </table>
-      <p className="mt-2 text-xs text-slate-500">Gold: champion · green: top four · blue: 5th and 6th · red: bottom three</p>
+      {legend.length > 0 ? (
+        <ul className="mt-2 flex flex-wrap gap-x-3 text-xs text-slate-500">
+          {legend.map((b) => (
+            <li key={b.label} className={`border-l-4 pl-1 ${BAND_BORDER[b.color]}`}>
+              {b.label} ({b.from === b.to ? b.from : `${b.from} to ${b.to}`})
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </section>
   );
 }

@@ -20,6 +20,38 @@ export interface SiteInfo {
   timerRange: { min: number; max: number };
   formations: string[];
   gameDefaults: GameSettings;
+  tableBands: TableBands;
+  maintenance: { enabled: boolean; message: string };
+}
+
+export type BandColor = 'gold' | 'green' | 'blue' | 'red' | 'purple';
+export interface TableBands {
+  enabled: boolean;
+  bands: { label: string; from: number; to: number; color: BandColor }[];
+}
+
+export const DEFAULT_BANDS: TableBands = {
+  enabled: true,
+  bands: [
+    { label: 'Champion', from: 1, to: 1, color: 'gold' },
+    { label: 'Top four', from: 2, to: 4, color: 'green' },
+    { label: 'Next tier', from: 5, to: 6, color: 'blue' },
+    { label: 'Bottom three', from: 18, to: 20, color: 'red' },
+  ],
+};
+
+export const BAND_BORDER: Record<BandColor, string> = {
+  gold: 'border-l-gold-500',
+  green: 'border-l-pitch-500',
+  blue: 'border-l-sky-500',
+  red: 'border-l-red-500',
+  purple: 'border-l-purple-500',
+};
+
+/** The colour band for a final position, if any. */
+export function bandFor(bands: TableBands | undefined, position: number) {
+  const b = bands ?? DEFAULT_BANDS;
+  return b.enabled ? b.bands.find((x) => position >= x.from && position <= x.to) : undefined;
 }
 
 export function useSite() {

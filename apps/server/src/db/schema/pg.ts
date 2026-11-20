@@ -79,6 +79,7 @@ export const clubs = pgTable(
     primaryColor: text('primary_color').notNull(),
     secondaryColor: text('secondary_color').notNull(),
     strengthRating: doublePrecision('strength_rating'),
+    strengthOverride: doublePrecision('strength_override'),
     inPool: boolean('in_pool').notNull().default(true),
     notes: text('notes'),
   },

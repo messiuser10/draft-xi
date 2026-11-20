@@ -137,3 +137,20 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - Export is host or admin only: JSON (settings, seed, and per season the table, awards, grades and picks) or CSV (final table of every season).
 - The share image is drawn on a canvas in the browser (1080 by 1350 PNG) with the fan game disclaimer; no logos or photos.
 - Pitch slot positions are inset vertically so tokens with stat lines stay inside the pitch.
+
+## M6: admin
+
+- Admins can use every host control in every game (start, pause, skip, undo, kick, bots, pick order, playback, cancel); the lobby and draft pages show those controls to admins too.
+- Every admin service method re-checks the admin role itself, on top of the route guard for `/api/admin/*`. All admin actions are audited.
+- Players that were drafted or played in a season cannot be hard-deleted (the history needs them); the admin is told to deactivate them instead.
+- Imports match rows by id when given, else by club and name (accents and case ignored). Any row error blocks the whole apply; the preview shows added, changed (field by field) and unchanged rows first. Imports never delete players.
+- Duplicate detection groups players whose names match after removing accents, case and punctuation, across all clubs.
+- Rebalance Club and bulk overall changes clamp to 40 to 99. Player edits refresh the cached `clubs.strength_rating`.
+- Club strength override (`clubs.strength_override`) replaces the computed rating when ranking clubs and choosing AI teams; clearing it restores the computed value.
+- AI club selection (setting `ai.selection`): top by strength (default), a manual list (topped up with the strongest clubs if it is short), or random from the game seed.
+- Tiebreakers after points are an ordered list in the simulation parameters (goal difference, goals scored, head to head, wins); a seeded draw settles anything left. Settings saved before this existed keep the default order.
+- Table colour bands (`table.bands`) can be renamed, recoloured, added, removed or switched off, and the season and results tables use them.
+- Maintenance mode (`site.maintenance`) shows a red banner and stops non-admins creating games; announcements use the separate `site.banner`.
+- Reset Draft deletes every pick and restarts from pick 1 with a fresh timer. Re-run Simulation deletes every season of the game and simulates season 1 again from the game seed (Change Seed sets it).
+- Deleting a user removes the account, its sessions and chat messages; their teams in old games stay (with no user attached). Admins cannot ban, demote or delete themselves.
+- The Simulation Lab runs one season or a Monte Carlo (10 to 1,000 seasons) for any even number of in-pool clubs (each plays its best XI) or for a game's 20 teams, with optional parameter overrides that are not saved. Test Draft makes a game with the admin's team plus bots, auto-drafts every pick and simulates the season.

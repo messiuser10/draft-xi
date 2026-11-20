@@ -16,7 +16,8 @@ Unofficial fan game, not affiliated with any club, league or player.
 | M3 | Draft room: snake, linear and Pack Pick modes, pick validation in transactions, server timers, auto-pick, queue, bots, host controls, disconnect handling, Team Reveal | Done |
 | M4 | Season: stored simulation, synchronized or own-pace playback, matchday results, live table, match ticker, key moments, League Teams, Run It Back, multi-season, Expected Strength (Monte Carlo) | Done |
 | M5 | Results: awards, draft grades and pick tags, team pages, head to head, share text and image, export, rematch, profiles, Hall of Fame, leaderboard, record book | Done |
-| M6 to M7 | Admin, polish | Not started |
+| M6 | Admin panel: overview and data health, players (search, inline and bulk edit, import and export with diff preview, duplicates, rebalance), clubs (colours, pool, strength override, custom clubs, AI preview), games, settings, Simulation Lab and Test Draft, users, audit log, announcements | Done |
+| M7 | Polish: mobile, motion, accessibility, Docker, Playwright smoke test | Next |
 
 ## Requirements
 
@@ -148,6 +149,7 @@ Main endpoints (all under `/api`):
 | Draft | `POST /games/:code/picks` `{ playerId, slotKey }`, `PUT /games/:code/queue` `{ playerIds }`, `GET /games/:code/pack`, `POST /games/:code/pack/reroll` |
 | Host draft controls | `POST /games/:code/draft/{pause,resume,skip,undo,extend,end,bot,disconnect-policy}` |
 | Results | `GET /games/:code/results?season=n`, `GET /games/:code/teams/:teamId?season=n`, `GET /games/:code/export?format=json\|csv` (host), `POST /games/:code/rematch` (host) |
+| Admin (admin role only, re-checked on every request) | `GET /admin/overview`; `GET,POST /admin/players`, `PATCH,DELETE /admin/players/:id`, `POST /admin/players/bulk`, `GET /admin/players/export?format=`, `POST /admin/players/import/{preview,apply}`, `GET /admin/players/duplicates`; `GET,POST /admin/clubs`, `PATCH /admin/clubs/:id`, `POST /admin/clubs/:id/rebalance`, `GET /admin/clubs/ranking?humans=`; `GET /admin/games`, `POST /admin/games/:code/{reset-draft,rerun,seed}`, `DELETE /admin/games/:code`; `GET /admin/settings`, `PUT /admin/settings/:key`; `POST /admin/lab/run`, `POST /admin/lab/test-draft`; `GET /admin/users`, `PATCH /admin/users/:id/role`, `POST /admin/users/:id/ban`, `GET /admin/users/:id/games`, `DELETE /admin/users/:id`; `GET /admin/audit?actor=&action=&game=&from=&to=&format=`; `PUT /admin/announcement` |
 | History | `GET /profile`, `GET /users/:id/profile`, `GET /hall-of-fame`, `GET /leaderboard`, `GET /records` |
 | Season | `POST /games/:code/season` (start), `POST /games/:code/seasons` `{ count }` (Run It Back, multi-season), `GET /games/:code/seasons`, `GET /games/:code/seasons/:n`, `GET /games/:code/league`, `GET /games/:code/montecarlo?runs=1000`, `POST /games/:code/playback` `{ action, speed?, matchday?, seasonNumber? }` |
 

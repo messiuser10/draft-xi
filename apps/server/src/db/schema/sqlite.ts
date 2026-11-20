@@ -78,6 +78,7 @@ export const clubs = sqliteTable(
     secondaryColor: text('secondary_color').notNull(),
     /** Cached club strength (best XI average plus depth bonus). Recomputed when players change. */
     strengthRating: real('strength_rating'),
+    strengthOverride: real('strength_override'),
     inPool: bool('in_pool').notNull().default(true),
     notes: text('notes'),
   },

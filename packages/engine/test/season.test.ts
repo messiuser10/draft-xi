@@ -142,3 +142,28 @@ describe('injuries (off by default)', () => {
     expect(simulateSeason(teams, { seed: 42, params: { injuries: true } })).toEqual(injured);
   });
 });
+
+describe('tiebreaker order', () => {
+  it('uses the configured order, then a seeded draw', async () => {
+    const { LeagueTable } = await import('../src/table');
+    const points = { win: 3, draw: 1, loss: 0 };
+    // Four results that leave every team on 3 points.
+    const fixtures = [
+      { homeTeamId: 'A', awayTeamId: 'B', homeGoals: 1, awayGoals: 0 },
+      { homeTeamId: 'C', awayTeamId: 'D', homeGoals: 5, awayGoals: 0 },
+      { homeTeamId: 'B', awayTeamId: 'C', homeGoals: 4, awayGoals: 3 },
+      { homeTeamId: 'D', awayTeamId: 'A', homeGoals: 1, awayGoals: 0 },
+    ];
+    const order = (keys: ('goalDifference' | 'goalsFor' | 'headToHead' | 'wins')[]) => {
+      const t = new LeagueTable(['A', 'B', 'C', 'D'], points, 7, keys);
+      for (const f of fixtures) t.record(f);
+      return t.standings().map((r) => r.teamId);
+    };
+    // GD: C +4, A 0, B 0, D -4. Goals for: C 8, B 4, A 1, D 1.
+    expect(order(['goalDifference', 'goalsFor'])).toEqual(['C', 'B', 'A', 'D']);
+    expect(order(['goalsFor'])[0]).toBe('C');
+    // Wins only: everyone has one win, so the seeded draw decides, and is stable.
+    expect(order(['wins'])).toEqual(order(['wins']));
+    expect(order([]).sort()).toEqual(['A', 'B', 'C', 'D']);
+  });
+});

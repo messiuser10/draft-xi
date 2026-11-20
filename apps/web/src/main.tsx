@@ -18,6 +18,16 @@ import { HallOfFamePage, LeaderboardPage } from './pages/HallOfFame';
 import { ProfilePage } from './pages/Profile';
 import { ResultsPage } from './pages/Results';
 import { TeamPage } from './pages/Team';
+import { AdminAnnouncementsPage } from './pages/admin/Announcements';
+import { AdminAuditPage } from './pages/admin/Audit';
+import { AdminClubsPage } from './pages/admin/Clubs';
+import { AdminGamesPage } from './pages/admin/Games';
+import { AdminLabPage } from './pages/admin/Lab';
+import { AdminOverviewPage } from './pages/admin/Overview';
+import { AdminPlayersPage } from './pages/admin/Players';
+import { AdminSettingsPage } from './pages/admin/Settings';
+import { AdminLayout } from './pages/admin/shared';
+import { AdminUsersPage } from './pages/admin/Users';
 import './styles.css';
 
 const queryClient = new QueryClient({
@@ -44,6 +54,21 @@ const router = createBrowserRouter([
       { path: '/profile/:userId', element: <ProfilePage /> },
       { path: '/hall-of-fame', element: <HallOfFamePage /> },
       { path: '/leaderboard', element: <LeaderboardPage /> },
+      {
+        path: '/admin',
+        element: <AdminLayout />,
+        children: [
+          { index: true, element: <AdminOverviewPage /> },
+          { path: 'players', element: <AdminPlayersPage /> },
+          { path: 'clubs', element: <AdminClubsPage /> },
+          { path: 'games', element: <AdminGamesPage /> },
+          { path: 'settings', element: <AdminSettingsPage /> },
+          { path: 'lab', element: <AdminLabPage /> },
+          { path: 'users', element: <AdminUsersPage /> },
+          { path: 'audit', element: <AdminAuditPage /> },
+          { path: 'announcements', element: <AdminAnnouncementsPage /> },
+        ],
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

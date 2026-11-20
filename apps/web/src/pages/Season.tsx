@@ -24,6 +24,7 @@ import { TeamBadge } from '../components/TeamBadge';
 import { useAction } from '../lib/actions';
 import { api } from '../lib/api';
 import { useSeason } from '../lib/league';
+import { BAND_BORDER, bandFor, useSite } from '../lib/session';
 import { serverNow, useGame } from '../lib/socket';
 
 export function SeasonPage() {
@@ -293,17 +294,18 @@ function KeyMoments({ season, upTo }: { season: SeasonView; upTo: number }) {
 
 // ---------- Table ----------
 
-/** Colour bands: champion, top four, next two, bottom three (spec section 10). */
-function band(position: number): string {
-  if (position === 1) return 'border-l-4 border-gold-500';
-  if (position <= 4) return 'border-l-4 border-pitch-500';
-  if (position <= 6) return 'border-l-4 border-sky-500';
-  if (position >= 18) return 'border-l-4 border-red-500';
-  return 'border-l-4 border-transparent';
+/** Colour bands from the admin settings (spec section 10). */
+function useBand(): (position: number) => string {
+  const { data: site } = useSite();
+  return (position) => {
+    const b = bandFor(site?.tableBands, position);
+    return `border-l-4 ${b ? BAND_BORDER[b.color] : 'border-l-transparent'}`;
+  };
 }
 
 function LeagueTable({ rows, prev, teams, final }: { rows: StandingView[]; prev: StandingView[] | undefined; teams: Map<string, LeagueTeamView>; final: boolean }) {
   const prevPos = new Map(prev?.map((r) => [r.teamId, r.position]));
+  const band = useBand();
   return (
     <div className="mt-2 overflow-x-auto">
       <table className="w-full text-sm">

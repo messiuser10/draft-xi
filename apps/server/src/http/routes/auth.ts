@@ -45,5 +45,7 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: ServerContext, opt
     timerRange: await getSetting(ctx.database, 'draft.timerRange'),
     formations: await getSetting(ctx.database, 'formations.enabled'),
     gameDefaults: await getSetting(ctx.database, 'game.defaults'),
+    tableBands: await getSetting(ctx.database, 'table.bands'),
+    maintenance: await getSetting(ctx.database, 'site.maintenance'),
   }));
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "clubs" ADD COLUMN "strength_override" double precision;

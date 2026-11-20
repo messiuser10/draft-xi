@@ -2,7 +2,7 @@
  * API contract shared by the server and the web app: input schemas (zod) and the shapes the
  * server sends back. Imports nothing from the server's runtime, so the web app can use it.
  */
-import { FORMATION_IDS, type FormationId } from '@draft-xi/engine';
+import { FORMATION_IDS, type FormationId, POSITIONS } from '@draft-xi/engine';
 import { z } from 'zod';
 
 // ---------- Auth ----------
@@ -693,4 +693,218 @@ export interface RecordBookView {
   mostPoints: RecordEntry | null;
   mostGoalsByDrafted: RecordEntry | null;
   bestGoalDifference: RecordEntry | null;
+}
+
+// ---------- Admin panel (M6) ----------
+
+const positionSchema = z.enum(POSITIONS);
+const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Use a colour like #22C55E');
+
+export const adminPlayerQuerySchema = z.object({
+  search: z.string().trim().max(60).optional(),
+  clubId: z.coerce.number().int().positive().optional(),
+  position: positionSchema.optional(),
+  status: z.enum(['all', 'active', 'inactive', 'injured', 'flagged']).default('all'),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(50),
+});
+
+export const adminPlayerInputSchema = z.object({
+  clubId: z.number().int().positive(),
+  fullName: z.string().trim().min(2).max(80),
+  displayName: z.string().trim().min(2).max(40).optional(),
+  primaryPosition: positionSchema,
+  altPositions: z.array(positionSchema).max(4).default([]),
+  overall: z.number().int().min(40).max(99),
+  nationality: z.string().trim().min(2).max(40),
+  isActive: z.boolean().default(true),
+  isInjured: z.boolean().default(false),
+  sourceNote: z.string().trim().max(300).nullable().default(null),
+});
+export const adminPlayerPatchSchema = adminPlayerInputSchema.partial();
+
+export const adminBulkPlayersSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1).max(1000),
+  patch: z
+    .object({
+      clubId: z.number().int().positive().optional(),
+      isActive: z.boolean().optional(),
+      isInjured: z.boolean().optional(),
+      overallDelta: z.number().int().min(-30).max(30).optional(),
+    })
+    .refine((p) => Object.keys(p).length > 0, 'Choose at least one change'),
+});
+
+export const adminImportSchema = z.object({
+  format: z.enum(['json', 'csv']),
+  content: z.string().min(1).max(5_000_000),
+});
+
+export const adminRebalanceSchema = z.object({ delta: z.number().int().min(-20).max(20).refine((d) => d !== 0, 'Delta cannot be 0') });
+
+export const adminClubInputSchema = z.object({
+  name: z.string().trim().min(2).max(60),
+  shortName: z.string().trim().min(2).max(20),
+  country: z.string().trim().min(2).max(40),
+  leagueName: z.string().trim().min(2).max(40),
+  primaryColor: hexColor,
+  secondaryColor: hexColor,
+  inPool: z.boolean().default(true),
+  strengthOverride: z.number().min(40).max(99).nullable().default(null),
+  notes: z.string().trim().max(300).nullable().default(null),
+});
+export const adminClubPatchSchema = adminClubInputSchema.partial();
+
+export const adminGameQuerySchema = z.object({
+  status: z.enum(['all', 'lobby', 'drafting', 'paused', 'draft_complete', 'simulating', 'completed', 'cancelled']).default('all'),
+});
+export const adminSeedSchema = z.object({ seed: z.number().int().min(1).max(2 ** 31 - 1) });
+
+export const adminSettingSchema = z.object({ value: z.unknown() });
+export const adminBanSchema = z.object({ banned: z.boolean() });
+export const adminUserQuerySchema = z.object({ search: z.string().trim().max(60).optional(), includeGuests: z.coerce.boolean().default(false) });
+
+export const adminAuditQuerySchema = z.object({
+  actor: z.string().trim().max(60).optional(),
+  action: z.string().trim().max(60).optional(),
+  game: z.string().trim().max(10).optional(),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+  format: z.enum(['json', 'csv']).default('json'),
+  limit: z.coerce.number().int().min(1).max(5000).default(200),
+});
+
+export const announcementSchema = z.object({ text: z.string().trim().max(300) });
+
+export const labRunSchema = z.object({
+  source: z.union([z.object({ gameCode: joinCodeSchema }), z.object({ clubIds: z.array(z.number().int().positive()).min(2).max(20) })]),
+  seed: z.number().int().min(1).max(2 ** 31 - 1).optional(),
+  mode: z.enum(['season', 'montecarlo']),
+  runs: z.number().int().min(10).max(1000).default(1000),
+  params: z
+    .object({
+      baseGoals: z.number().positive().max(5),
+      homeAdvantage: z.number().positive().max(3),
+      sensitivity: z.number().min(0).max(1),
+      chaos: z.number().min(0).max(1),
+      outOfPositionPenalty: z.number().min(0).max(40),
+      reserveRating: z.number().int().min(40).max(99),
+      chemistry: z.boolean(),
+      injuries: z.boolean(),
+    })
+    .partial()
+    .default({}),
+});
+
+export const testDraftSchema = z.object({
+  teams: z.number().int().min(1).max(HARD_MAX_HUMANS).default(4),
+  level: z.enum(BOT_LEVELS).default('medium'),
+});
+
+export interface AdminOverview {
+  counts: { users: number; guests: number; activeLobbies: number; draftsInProgress: number; seasonsSimulated: number; players: number; activePlayers: number; clubs: number };
+  recent: AuditEntryView[];
+  health: { level: 'warning' | 'info'; message: string }[];
+}
+
+export interface AuditEntryView {
+  id: number;
+  actor: string;
+  action: string;
+  target: string | null;
+  gameId: number | null;
+  gameCode: string | null;
+  details: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface AdminPlayerView {
+  id: number;
+  clubId: number;
+  clubName: string;
+  fullName: string;
+  displayName: string;
+  primaryPosition: string;
+  altPositions: string[];
+  overall: number;
+  nationality: string;
+  isActive: boolean;
+  isInjured: boolean;
+  sourceNote: string | null;
+  updatedAt: string;
+}
+
+export interface ImportRowChange {
+  id: number | null;
+  club: string;
+  name: string;
+  changes: Record<string, [unknown, unknown]>;
+}
+
+export interface ImportPreview {
+  added: ImportRowChange[];
+  updated: ImportRowChange[];
+  unchanged: number;
+  errors: { row: number; message: string }[];
+}
+
+export interface AdminClubView {
+  id: number;
+  name: string;
+  shortName: string;
+  country: string;
+  leagueName: string;
+  primaryColor: string;
+  secondaryColor: string;
+  inPool: boolean;
+  strengthRating: number | null;
+  strengthOverride: number | null;
+  notes: string | null;
+  activePlayers: number;
+  goalkeepers: number;
+}
+
+export interface ClubRankingView {
+  humans: number;
+  method: 'strength' | 'manual' | 'random';
+  rows: { clubId: number; clubName: string; rating: number; computed: number; overridden: boolean; rank: number; isAi: boolean }[];
+}
+
+export interface AdminGameView {
+  id: number;
+  code: string;
+  name: string;
+  status: GameStatus;
+  hostName: string | null;
+  humans: number;
+  bots: number;
+  seasons: number;
+  seed: number | null;
+  createdAt: string;
+}
+
+export interface AdminUserView {
+  id: number;
+  username: string | null;
+  displayName: string;
+  role: 'admin' | 'user';
+  isGuest: boolean;
+  banned: boolean;
+  games: number;
+  createdAt: string;
+}
+
+export interface AdminSettingView {
+  key: string;
+  value: unknown;
+  defaultValue: unknown;
+}
+
+export interface LabResultView {
+  mode: 'season' | 'montecarlo';
+  seed: number;
+  teams: { id: string; name: string; strength: number }[];
+  table: StandingView[] | null;
+  monteCarlo: (Omit<MonteCarloView, 'rows'> & { rows: (MonteCarloView['rows'][number] & { minPoints: number; maxPoints: number })[]; drawRate: number; awayWinRate: number; pointsByPosition: number[]; goalsHistogram: number[] }) | null;
+  summary: { goalsPerMatch: number; homeWinRate: number; drawRate: number; championPoints: number; bottomPoints: number; pointsSpread: number };
 }

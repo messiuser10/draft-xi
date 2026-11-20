@@ -1,4 +1,4 @@
-import type { SimParams } from './params';
+import { DEFAULT_SIM_PARAMS, type SimParams, type TiebreakKey } from './params';
 import { hashSeed } from './rng';
 
 export interface StandingRow {
@@ -36,8 +36,9 @@ interface Tally {
 }
 
 /**
- * Builds the league table match by match. Order: points, goal difference, goals scored,
- * head-to-head points among the tied teams, then a seeded random draw (spec section 9, step 7).
+ * Builds the league table match by match. Order: points, then the tiebreakers in order (default:
+ * goal difference, goals scored, head-to-head points among the tied teams), then a seeded random
+ * draw (spec section 9, step 7).
  */
 export class LeagueTable {
   private readonly tallies = new Map<string, Tally>();
@@ -47,6 +48,7 @@ export class LeagueTable {
     teamIds: readonly string[],
     private readonly points: SimParams['points'],
     private readonly seed: number,
+    private readonly tiebreakers: readonly TiebreakKey[] = DEFAULT_SIM_PARAMS.tiebreakers,
   ) {
     for (const id of teamIds) {
       this.tallies.set(id, { played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0, results: [] });
@@ -111,25 +113,29 @@ export class LeagueTable {
       position: 0,
       form: t.results.slice(-5).join(''),
     }));
-    const primary = (a: StandingRow, b: StandingRow) =>
-      b.points - a.points || b.goalDifference - a.goalDifference || b.goalsFor - a.goalsFor;
-    rows.sort(primary);
+    const ordered = this.resolve(rows, ['points' as const, ...this.tiebreakers]);
+    return ordered.map((r, i) => ({ ...r, position: i + 1 }));
+  }
 
-    const ordered: StandingRow[] = [];
-    for (let i = 0; i < rows.length; ) {
+  /** Sorts a group by the first key, then settles each tie with the remaining keys. */
+  private resolve(group: StandingRow[], keys: readonly ('points' | TiebreakKey)[]): StandingRow[] {
+    if (group.length <= 1) return group;
+    const [key, ...rest] = keys;
+    if (!key) {
+      const draw = (id: string) => hashSeed(this.seed, 'tiebreak', id);
+      return [...group].sort((a, b) => draw(a.teamId) - draw(b.teamId));
+    }
+    const h2h = key === 'headToHead' ? this.headToHead(group.map((r) => r.teamId)) : null;
+    const field = { points: 'points', goalDifference: 'goalDifference', goalsFor: 'goalsFor', wins: 'won', headToHead: 'points' } as const;
+    const value = (r: StandingRow) => (h2h ? (h2h.get(r.teamId) ?? 0) : r[field[key]]);
+    const sorted = [...group].sort((a, b) => value(b) - value(a));
+    const out: StandingRow[] = [];
+    for (let i = 0; i < sorted.length; ) {
       let j = i + 1;
-      while (j < rows.length && primary(rows[i]!, rows[j]!) === 0) j++;
-      const group = rows.slice(i, j);
-      if (group.length > 1) {
-        const h2h = this.headToHead(group.map((r) => r.teamId));
-        const draw = (id: string) => hashSeed(this.seed, 'tiebreak', id);
-        group.sort(
-          (a, b) => (h2h.get(b.teamId) ?? 0) - (h2h.get(a.teamId) ?? 0) || draw(a.teamId) - draw(b.teamId),
-        );
-      }
-      ordered.push(...group);
+      while (j < sorted.length && value(sorted[j]!) === value(sorted[i]!)) j++;
+      out.push(...this.resolve(sorted.slice(i, j), rest));
       i = j;
     }
-    return ordered.map((r, i) => ({ ...r, position: i + 1 }));
+    return out;
   }
 }

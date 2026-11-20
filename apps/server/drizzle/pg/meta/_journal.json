@@ -22,6 +22,13 @@
       "when": 1795189617318,
       "tag": "0002_draft_state",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795191621762,
+      "tag": "0003_club_strength_override",
+      "breakpoints": true
     }
   ]
 }
