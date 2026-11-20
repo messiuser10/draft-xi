@@ -1,0 +1,28 @@
+{
+  "name": "@draft-xi/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Draft XI League authoritative server: database, data loading, API and realtime.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "db:generate": "drizzle-kit generate --config drizzle.sqlite.config.ts && drizzle-kit generate --config drizzle.pg.config.ts"
+  },
+  "dependencies": {
+    "@draft-xi/engine": "*",
+    "better-sqlite3": "^13.2.0",
+    "csv-parse": "^7.0.3",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.17",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11"
+  }
+}

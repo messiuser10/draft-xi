@@ -1,0 +1,35 @@
+{
+  "name": "draft-xi-league",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Draft XI League: draft a starting XI from 20 real clubs and simulate a 38-matchday season.",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "check": "npm run typecheck && npm run lint && npm test",
+    "seed": "tsx scripts/seed.ts",
+    "data:validate": "tsx scripts/validate-data.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:generate": "npm run db:generate -w @draft-xi/server"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.10.0",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vitest": "^5.1.1"
+  }
+}
