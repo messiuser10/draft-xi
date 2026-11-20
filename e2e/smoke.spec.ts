@@ -33,7 +33,7 @@ test('create a game, bot-draft it and play a season', async ({ page }) => {
   await page.getByRole('button', { name: 'Start Season' }).click();
 
   await expect(page).toHaveURL(/\/season\//, { timeout: 60_000 });
-  await page.getByRole('button', { name: 'Instant' }).click();
+  await page.getByRole('button', { name: 'Skip to the end' }).click();
   await expect(page.getByRole('heading', { name: 'Full time' })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: /champion/i })).toBeVisible();
 

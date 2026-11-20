@@ -53,14 +53,26 @@ export function SeasonPage() {
 function usePlayback(snapshot: GameSnapshot) {
   const synced = snapshot.game.settings.playbackMode === 'synchronized';
   const shared = snapshot.playback;
-  const [local, setLocal] = useState<PlaybackState>(() => ({
-    seasonNumber: shared?.seasonNumber ?? snapshot.seasons.at(-1)?.number ?? 1,
-    matchday: 0,
-    playing: true,
-    speed: 1,
-    anchorAt: new Date().toISOString(),
-  }));
-  const state = synced && shared ? shared : local;
+  const [local, setLocal] = useState<PlaybackState>(() => {
+    // "Simulate to the end" on the reveal page opens the season on the final table.
+    let skip = false;
+    try {
+      skip = sessionStorage.getItem(`skip:${snapshot.game.code}`) === '1';
+      sessionStorage.removeItem(`skip:${snapshot.game.code}`);
+    } catch {
+      /* storage unavailable */
+    }
+    return {
+      seasonNumber: shared?.seasonNumber ?? snapshot.seasons.at(-1)?.number ?? 1,
+      matchday: skip ? SEASON_MATCHDAYS : 0,
+      playing: !skip,
+      speed: 1,
+      anchorAt: new Date().toISOString(),
+    };
+  });
+  // A viewer who cannot control synchronized playback can still jump to the end on their own screen.
+  const [personal, setPersonal] = useState<PlaybackState | null>(null);
+  const state = personal ?? (synced && shared ? shared : local);
   const clock = synced ? serverNow : Date.now;
   const [now, setNow] = useState(() => clock());
   useEffect(() => {
@@ -89,7 +101,12 @@ function usePlayback(snapshot: GameSnapshot) {
     setLocal(next);
     setNow(t);
   };
-  return { state, matchday, control, canControl, synced };
+  const skipToEnd = () => {
+    if (canControl) control('end');
+    else setPersonal({ ...state, matchday: SEASON_MATCHDAYS, playing: false, anchorAt: new Date().toISOString() });
+  };
+  const backToLive = () => setPersonal(null);
+  return { state, matchday, control, canControl, synced, skipToEnd, backToLive, personal: personal !== null };
 }
 
 function Season({ snapshot }: { snapshot: GameSnapshot }) {
@@ -111,6 +128,13 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
   const prevTable = md > 1 ? data.standings[md - 2] : undefined;
   const fixtures = data.fixtures.filter((f) => f.matchday === Math.max(1, shownDay));
   const done = md >= SEASON_MATCHDAYS;
+  const skipToEnd = () => {
+    playback.skipToEnd();
+    setViewDay(null);
+    setMobileTab('table');
+    // Bring the champion into view once the final table is shown.
+    setTimeout(() => document.getElementById('champion')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
+  };
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -124,12 +148,21 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
         <Link to={`/league/${code}`} className="btn-ghost">
           League Teams
         </Link>
-        <Link to={`/results/${code}?season=${data.number}`} className={done ? 'btn-primary' : 'btn-ghost'}>
-          {done ? 'Season results' : 'Results'}
-        </Link>
+        {done ? (
+          <Link to={`/results/${code}?season=${data.number}`} className="btn-primary">
+            Season results →
+          </Link>
+        ) : (
+          <button type="button" className="btn-primary" onClick={skipToEnd}>
+            ⏭ Skip to the end
+          </button>
+        )}
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-night-700" role="progressbar" aria-label="Season progress" aria-valuemin={0} aria-valuemax={SEASON_MATCHDAYS} aria-valuenow={md}>
+          <div className="h-full rounded-full bg-gradient-to-r from-pitch-600 to-pitch-400 transition-[width] duration-500" style={{ width: `${(md / SEASON_MATCHDAYS) * 100}%` }} />
+        </div>
       </header>
 
-      <Controls snapshot={snapshot} playback={playback} />
+      <Controls snapshot={snapshot} playback={playback} onSkip={skipToEnd} />
 
       {done ? <ChampionBanner season={data} teams={teams} /> : null}
 
@@ -194,8 +227,8 @@ function initialTable(season: SeasonView): StandingView[] {
 
 // ---------- Controls ----------
 
-function Controls({ snapshot, playback }: { snapshot: GameSnapshot; playback: ReturnType<typeof usePlayback> }) {
-  const { state, matchday, control, canControl, synced } = playback;
+function Controls({ snapshot, playback, onSkip }: { snapshot: GameSnapshot; playback: ReturnType<typeof usePlayback>; onSkip: () => void }) {
+  const { state, matchday, control, canControl, synced, personal, backToLive } = playback;
   const seasons = snapshot.seasons;
   return (
     <section className="card flex flex-wrap items-center gap-2 p-3" aria-label="Playback controls">
@@ -210,8 +243,8 @@ function Controls({ snapshot, playback }: { snapshot: GameSnapshot; playback: Re
                 {s}x
               </button>
             ))}
-            <button type="button" className="btn-secondary" onClick={() => control('end')}>
-              Instant
+            <button type="button" className="btn-secondary" onClick={onSkip} disabled={matchday >= SEASON_MATCHDAYS}>
+              ⏭ Skip to end
             </button>
           </div>
           <label className="flex min-w-48 flex-1 items-center gap-2 text-sm">
@@ -221,9 +254,20 @@ function Controls({ snapshot, playback }: { snapshot: GameSnapshot; playback: Re
           </label>
         </>
       ) : (
-        <p className="flex-1 text-sm text-slate-500">
-          The host controls playback · {state.playing ? `playing at ${state.speed}x` : 'paused'}
-        </p>
+        <>
+          <p className="flex-1 text-sm text-slate-500">
+            {personal ? 'You skipped ahead on your screen' : `The host controls playback · ${state.playing ? `playing at ${state.speed}x` : 'paused'}`}
+          </p>
+          {personal ? (
+            <button type="button" className="btn-secondary" onClick={backToLive}>
+              Back to live
+            </button>
+          ) : matchday < SEASON_MATCHDAYS ? (
+            <button type="button" className="btn-secondary" onClick={onSkip}>
+              ⏭ Skip to end (just me)
+            </button>
+          ) : null}
+        </>
       )}
       {seasons.length > 1 ? (
         <label className="text-sm">
@@ -404,7 +448,7 @@ function ChampionBanner({ season, teams }: { season: SeasonView; teams: Map<stri
   const row = season.standings.at(-1)?.[0];
   if (!champ || !row) return null;
   return (
-    <section className="card relative overflow-hidden p-6 text-center ring-2 ring-gold-500" role="status">
+    <section id="champion" className="card relative animate-reveal overflow-hidden p-6 text-center ring-2 ring-gold-500" role="status">
       <Confetti />
       <p className="text-5xl" aria-hidden>
         🏆

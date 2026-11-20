@@ -168,3 +168,4 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - Each Club Spin turn gets 3 extra seconds on the pick clock, and bots wait for the reel too: twice `BOT_PICK_DELAY_MS`, at most 3 seconds (so the default 1.5s bots wait the full 3s and instant bots do not wait).
 - Drafted players are locked into the slot they were drafted into; there is no way to move them (the server never allowed it, and tapping a filled slot does nothing).
 - The footer carries the owner's credit line "made by reyansh pathak" under the disclaimer.
+- Skip to the end: the season page has a "Skip to the end" button in the header and controls. In synchronized playback the host's skip moves everyone; other viewers get "Skip to end (just me)", which jumps only their own screen, with "Back to live" to rejoin. The reveal page also has "Simulate to the end", which starts the season already on the final table.

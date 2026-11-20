@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { useLogout, useMe, useSite } from '../lib/session';
 import { ensureSocket, useConnection, useToasts } from '../lib/socket';
 import { useSound } from '../lib/sound';
@@ -52,24 +52,24 @@ export function Layout() {
       ) : null}
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-white/5 dark:bg-night-900/80">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
-          <Link to="/" className="flex items-center gap-2" aria-label="Home">
-            <span className="grid size-9 place-items-center rounded-full ring-4 ring-pitch-500 display text-sm">XI</span>
+          <Link to="/" className="group flex items-center gap-2" aria-label="Home">
+            <span className="grid size-9 place-items-center rounded-full bg-night-950 text-white ring-4 ring-pitch-500 display text-sm shadow-lg shadow-pitch-500/30 transition group-hover:rotate-12">XI</span>
             <span className="display hidden text-xl sm:inline">{site?.leagueName ?? 'Draft XI League'}</span>
           </Link>
           <nav className="ml-auto flex min-w-0 items-center gap-1" aria-label="Main">
-            <Link to="/how-to-play" className="btn-ghost px-2 text-sm sm:px-4" aria-label="How to play">
+            <NavLink to="/how-to-play" className={({ isActive }) => `btn-ghost px-2 text-sm sm:px-4 ${isActive ? 'text-pitch-500 dark:text-pitch-400' : ''}`} aria-label="How to play">
               <span className="sm:hidden" aria-hidden>
                 ?
               </span>
               <span className="hidden sm:inline">How to play</span>
-            </Link>
-            <Link to="/hall-of-fame" className="btn-ghost hidden text-sm md:inline-flex">
+            </NavLink>
+            <NavLink to="/hall-of-fame" className={({ isActive }) => `btn-ghost hidden text-sm md:inline-flex ${isActive ? 'text-pitch-500 dark:text-pitch-400' : ''}`}>
               Hall of Fame
-            </Link>
+            </NavLink>
             {me?.role === 'admin' ? (
-              <Link to="/admin" className="btn-ghost hidden text-sm md:inline-flex">
+              <NavLink to="/admin" className={({ isActive }) => `btn-ghost hidden text-sm md:inline-flex ${isActive ? 'text-pitch-500 dark:text-pitch-400' : ''}`}>
                 Admin
-              </Link>
+              </NavLink>
             ) : null}
             <ConnectionDot />
             <button type="button" className="btn-ghost px-2 text-sm" onClick={sound.toggle} aria-pressed={sound.enabled} aria-label="Sound effects" title={sound.enabled ? 'Sound on' : 'Sound off'}>

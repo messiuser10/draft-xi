@@ -36,6 +36,18 @@ function Reveal({ snapshot }: { snapshot: GameSnapshot }) {
   // Reveal in pick order.
   const order = snapshot.participants.flatMap((p) => humans.find((h) => h.participantId === p.id) ?? []);
   const [shown, setShown] = useState(1);
+  /** Start the season; with `skip`, open it on the final table instead of matchday 1. */
+  const startSeason = async (skip: boolean) => {
+    if (skip) {
+      try {
+        sessionStorage.setItem(`skip:${code}`, '1');
+      } catch {
+        /* storage unavailable */
+      }
+    }
+    if (!(await run(`/api/games/${code}/season`))) return;
+    if (skip && snapshot.game.settings.playbackMode === 'synchronized') await run(`/api/games/${code}/playback`, 'POST', { action: 'end' });
+  };
   const all = shown >= order.length;
   useEffect(() => {
     if (all || order.length === 0) return;
@@ -58,9 +70,14 @@ function Reveal({ snapshot }: { snapshot: GameSnapshot }) {
           </button>
         ) : null}
         {snapshot.me.isHost || snapshot.me.isAdmin ? (
-          <button type="button" className="btn-primary" disabled={busy} onClick={() => void run(`/api/games/${code}/season`)}>
-            {busy ? 'Simulating…' : 'Start Season'}
-          </button>
+          <>
+            <button type="button" className="btn-secondary" disabled={busy} onClick={() => void startSeason(true)}>
+              ⏭ Simulate to the end
+            </button>
+            <button type="button" className="btn-primary" disabled={busy} onClick={() => void startSeason(false)}>
+              {busy ? 'Simulating…' : 'Start Season'}
+            </button>
+          </>
         ) : (
           <p className="text-sm text-slate-500">Waiting for the host to start the season.</p>
         )}
