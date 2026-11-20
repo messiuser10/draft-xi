@@ -5,24 +5,34 @@
   "type": "module",
   "description": "Draft XI League authoritative server: database, data loading, API and realtime.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./contracts": "./src/contracts.ts"
   },
   "scripts": {
+    "dev": "tsx watch --clear-screen=false src/main.ts",
+    "start": "tsx src/main.ts",
     "typecheck": "tsc -p tsconfig.json",
     "db:generate": "drizzle-kit generate --config drizzle.sqlite.config.ts && drizzle-kit generate --config drizzle.pg.config.ts"
   },
   "dependencies": {
     "@draft-xi/engine": "*",
+    "@fastify/cookie": "^11.1.5",
+    "@fastify/rate-limit": "^11.2.2",
+    "@fastify/static": "^10.1.12",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.2.0",
     "csv-parse": "^7.0.3",
     "drizzle-orm": "^0.45.4",
+    "fastify": "^5.12.8",
     "pg": "^8.23.1",
+    "socket.io": "^4.8.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.17",
     "@types/better-sqlite3": "^9.6.0",
     "@types/pg": "^8.23.1",
-    "drizzle-kit": "^0.31.11"
+    "drizzle-kit": "^0.31.11",
+    "socket.io-client": "^4.8.4"
   }
 }

@@ -12,8 +12,9 @@ Unofficial fan game, not affiliated with any club, league or player.
 | --- | --- | --- |
 | M0 | Monorepo, TypeScript, lint, tests, database schema and migrations, seed and data validation | Done |
 | M1 | Engine: formations, ratings, AI lineups, fixtures, match and season simulation, Monte Carlo, awards, draft grades, `npm run sim` | Done |
-| M2 | Server foundation: auth, lobby, realtime, start-game flow | Next |
-| M3 to M7 | Draft, season, results, admin, polish | Not started |
+| M2 | Server foundation: accounts, guests, admin roles, lobby, host controls, Socket.IO, start-game flow; web app with home, sign-in, create, lobby and kickoff | Done |
+| M3 | Draft room, pick validation, timers, auto-pick, bots | Next |
+| M4 to M7 | Season, results, admin, polish | Not started |
 
 ## Requirements
 
@@ -36,6 +37,9 @@ npm install
 
 | Command | What it does |
 | --- | --- |
+| `npm run dev` | Runs the API server (http://127.0.0.1:3000, restarts on change) and the web app (http://localhost:5173, proxies `/api` and `/socket.io` to the server) together. Open http://localhost:5173. The server migrates the database on boot and seeds it from `data/` if it is empty. |
+| `npm run build` | Builds the web app into `apps/web/dist`. |
+| `npm start` | Production mode: one process serves the API, Socket.IO and the built web app on `PORT`. Run `npm run build` first. |
 | `npm run data:validate` | Checks `data/` against the data rules (618 players, 20 known clubs, at least 22 players and 2 GKs per club, valid positions, ratings 40 to 99, no duplicate names within a club). Exits 1 on errors. |
 | `npm run seed` | Applies migrations, validates `data/`, then loads clubs and players into the database. Idempotent: run it as often as you like. |
 | `npm run sim -- --humans 3 --seed 42` | Random-drafts N human teams, adds the (20 - N) strongest clubs, simulates a season and prints the table, awards and draft grades. Add `--monte-carlo 1000` for expected strength, `--seasons 5` for a titles table, `--injuries`, `--no-chemistry`, `--keep-drafted`, or override `--base-goals`, `--home-advantage`, `--sensitivity`, `--chaos`. |
@@ -46,8 +50,6 @@ npm install
 | `npm run lint` | ESLint with type-aware rules. |
 | `npm run check` | typecheck, lint and test in one go. |
 
-Coming in M2: `npm run dev` (server and web together).
-
 ## Environment variables
 
 Copy `.env.example` to `.env` to override defaults. Real environment variables take precedence.
@@ -55,6 +57,14 @@ Copy `.env.example` to `.env` to override defaults. Real environment variables t
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `DATABASE_URL` | `file:var/draft-xi.db` | `postgres://` or `postgresql://` URL selects Postgres. Anything else is a SQLite file path (optional `file:` prefix), resolved from the repo root. `:memory:` gives a throwaway database. |
+| `NODE_ENV` | `development` | `production` serves the built web app, trusts the proxy's `X-Forwarded-*` headers and turns on secure cookies. `test` is used by the test suite. |
+| `HOST` | `127.0.0.1` | Interface the server listens on. Use `0.0.0.0` in a container. |
+| `PORT` | `3000` | Server port. |
+| `ADMIN_USERNAME` | (none) | Whoever registers with this username becomes an admin (even if registrations are closed). Admins can promote other users. |
+| `COOKIE_SECURE` | `true` in production, else `false` | Send the session cookie only over HTTPS. Set `false` to test a production build over plain HTTP. |
+| `START_COUNTDOWN_SECONDS` | `5` | Countdown between the host pressing Start and the draft opening. |
+| `WEB_DIST` | `apps/web/dist` in production | Folder of built web assets the server serves. |
+| `VITE_API_TARGET` | `http://127.0.0.1:3000` | Development only: where the Vite dev server proxies API and socket requests. |
 
 ## Project layout
 
@@ -62,10 +72,17 @@ Copy `.env.example` to `.env` to override defaults. Real environment variables t
 packages/engine     Pure, deterministic game logic, no I/O: positions and formations, AI lineups,
                     ratings and club strength, fixtures, match and season sim, Monte Carlo,
                     draft order and auto-pick, awards, draft grades
-apps/server         Database schema, migrations, data loading (API and realtime arrive in M2)
-  src/db/schema/    sqlite.ts and pg.ts: the same 16 tables for each dialect
+apps/server         Fastify API, Socket.IO, database, data loading
+  src/contracts.ts  Zod input schemas and response types shared with the web app
+  src/auth/         Accounts, guest sessions, roles
+  src/games/        Game lifecycle: lobby, host controls, start flow
+  src/http/         Fastify app and routes (/api/auth, /api/games, /api/admin)
+  src/realtime/     Socket.IO: per-game rooms, snapshots and events
+  src/settings/     Site settings (app_settings table) and the team-name filter
+  src/db/           One query API over SQLite and Postgres (database.ts) and both schemas
   drizzle/          Generated migrations: sqlite/ and pg/
   src/data/         Reading, validating and seeding the data files
+apps/web            React + Vite + Tailwind web app: home, sign-in, create, solo, lobby, kickoff
 data/               Owner-supplied seed data: players.seed.json, players.csv, clubs.json
 scripts/            CLI entry points: seed, validate-data, migrate, sim
 ```
@@ -107,6 +124,23 @@ SQLite (via better-sqlite3) is the default. Postgres works too: set `DATABASE_UR
 `postgres://` URL and run `npm run seed`. The two schemas are kept identical by a parity test,
 and the seed tests run against both.
 
+## API and realtime
+
+All input is validated with zod (`apps/server/src/contracts.ts`); errors come back as
+`{ "error": { "code", "message", "issues"? } }`. Sessions are an httpOnly `dxl_session` cookie
+(30 days); only a SHA-256 hash of the token is stored. Login, register and guest are rate
+limited to 20 requests per minute per IP.
+
+Socket.IO clients send `game:subscribe` with a join code and receive a full `game:snapshot`,
+then small `game:event`s. A client that reconnects subscribes again and gets a fresh snapshot.
+Anyone with the code can watch; the cookie, if present, identifies the viewer.
+
 ## Deploy
 
-Docker and production build instructions arrive in M7.
+```bash
+npm install
+npm run build
+NODE_ENV=production HOST=0.0.0.0 PORT=3000 ADMIN_USERNAME=yourname npm start
+```
+
+Put it behind an HTTPS proxy (cookies are `Secure` in production). Docker files arrive in M7.

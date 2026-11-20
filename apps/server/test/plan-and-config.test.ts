@@ -55,8 +55,25 @@ describe('parseDatabaseUrl', () => {
 });
 
 describe('loadConfig', () => {
-  it('defaults DATABASE_URL to the local SQLite file', () => {
-    expect(loadConfig({})).toEqual({ DATABASE_URL: 'file:var/draft-xi.db' });
+  it('fills in defaults', () => {
+    expect(loadConfig({})).toEqual({
+      NODE_ENV: 'development',
+      DATABASE_URL: 'file:var/draft-xi.db',
+      HOST: '127.0.0.1',
+      PORT: 3000,
+      START_COUNTDOWN_SECONDS: 5,
+      COOKIE_SECURE: false,
+    });
+  });
+
+  it('turns on secure cookies in production unless told otherwise', () => {
+    expect(loadConfig({ NODE_ENV: 'production' }).COOKIE_SECURE).toBe(true);
+    expect(loadConfig({ NODE_ENV: 'production', COOKIE_SECURE: 'false' }).COOKIE_SECURE).toBe(false);
+  });
+
+  it('lowercases ADMIN_USERNAME and rejects bad values', () => {
+    expect(loadConfig({ ADMIN_USERNAME: ' Boss ' }).ADMIN_USERNAME).toBe('boss');
+    expect(() => loadConfig({ PORT: 'abc' })).toThrow(/Invalid environment/);
   });
 
   it('uses DATABASE_URL when set', () => {

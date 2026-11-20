@@ -54,6 +54,19 @@ export const users = pgTable(
   (t) => [uniqueIndex('users_username_unique').on(t.username)],
 );
 
+export const sessions = pgTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestampNow('created_at'),
+    expiresAt: timestampTz('expires_at').notNull(),
+  },
+  (t) => [index('sessions_user_idx').on(t.userId)],
+);
+
 export const clubs = pgTable(
   'clubs',
   {

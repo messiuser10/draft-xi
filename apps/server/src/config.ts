@@ -3,11 +3,26 @@ import path from 'node:path';
 import { z } from 'zod';
 import { REPO_ROOT } from './paths';
 
+const booleanish = z
+  .enum(['true', 'false', '1', '0'])
+  .transform((v) => v === 'true' || v === '1');
+
 const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().min(1).default('file:var/draft-xi.db'),
+  HOST: z.string().default('127.0.0.1'),
+  PORT: z.coerce.number().int().min(0).max(65535).default(3000),
+  /** A user registering with this username becomes an admin. */
+  ADMIN_USERNAME: z.string().trim().toLowerCase().optional(),
+  /** Send cookies with the Secure flag. Defaults to true in production. */
+  COOKIE_SECURE: booleanish.optional(),
+  /** Seconds between the host pressing Start and the draft starting. */
+  START_COUNTDOWN_SECONDS: z.coerce.number().min(0).max(60).default(5),
+  /** Directory of the built web app to serve (production). */
+  WEB_DIST: z.string().optional(),
 });
 
-export type AppConfig = z.infer<typeof envSchema>;
+export type AppConfig = Omit<z.infer<typeof envSchema>, 'COOKIE_SECURE'> & { COOKIE_SECURE: boolean };
 
 let envFileLoaded = false;
 
@@ -25,5 +40,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (!parsed.success) {
     throw new Error(`Invalid environment configuration:\n${z.prettifyError(parsed.error)}`);
   }
-  return parsed.data;
+  const { COOKIE_SECURE, ...rest } = parsed.data;
+  return { ...rest, COOKIE_SECURE: COOKIE_SECURE ?? rest.NODE_ENV === 'production' };
 }

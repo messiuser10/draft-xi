@@ -60,7 +60,7 @@ const pgTables = Object.values(pgSchema)
   .map((t) => describeTable(getPgTableConfig(t)));
 
 describe('schema parity (SQLite vs Postgres)', () => {
-  it('defines the same 16 tables as the spec data model', () => {
+  it('defines the 16 spec tables plus sessions', () => {
     const names = sqliteTables.map((t) => t.name).sort();
     expect(names).toEqual([
       'app_settings',
@@ -77,6 +77,7 @@ describe('schema parity (SQLite vs Postgres)', () => {
       'queue_items',
       'season_teams',
       'seasons',
+      'sessions',
       'standing_rows',
       'users',
     ]);

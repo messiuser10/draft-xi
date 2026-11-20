@@ -11,3 +11,6 @@ var/
 !.env.example
 .DS_Store
 *.log
+
+# Local editor and tool settings
+.claude/

@@ -51,6 +51,20 @@ export const users = sqliteTable(
   (t) => [uniqueIndex('users_username_unique').on(t.username)],
 );
 
+/** Login sessions. The cookie holds a random token; only its SHA-256 hash is stored. */
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestampNow('created_at'),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (t) => [index('sessions_user_idx').on(t.userId)],
+);
+
 export const clubs = sqliteTable(
   'clubs',
   {

@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --color-night-950: #070c16;
+  --color-night-900: #0b1220;
+  --color-night-800: #111a2e;
+  --color-night-700: #1a2540;
+  --color-night-600: #26345a;
+  --color-pitch-400: #4ade80;
+  --color-pitch-500: #22c55e;
+  --color-pitch-600: #16a34a;
+  --color-gold-400: #fcd34d;
+  --color-gold-500: #f5b700;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-slate-100 text-slate-900 dark:bg-night-900 dark:text-white font-sans antialiased;
+  min-height: 100dvh;
+}
+
+@utility card {
+  @apply rounded-2xl bg-white shadow-lg shadow-black/5 ring-1 ring-slate-200 dark:bg-night-800 dark:shadow-black/30 dark:ring-white/5;
+}
+
+@utility btn {
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2 font-semibold transition
+    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pitch-400 disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-pitch-500 text-night-950 hover:bg-pitch-400;
+}
+@utility btn-secondary {
+  @apply btn bg-slate-200 text-slate-900 hover:bg-slate-300 dark:bg-night-700 dark:text-white dark:hover:bg-night-600;
+}
+@utility btn-danger {
+  @apply btn bg-red-600/90 text-white hover:bg-red-500;
+}
+@utility btn-ghost {
+  @apply btn text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-night-700;
+}
+
+@utility input {
+  @apply min-h-11 w-full rounded-xl border-0 bg-slate-100 px-3 py-2 text-slate-900 ring-1 ring-slate-300 placeholder:text-slate-400
+    focus:ring-2 focus:ring-pitch-500 focus:outline-none dark:bg-night-900 dark:text-white dark:ring-night-600;
+}
+
+@utility label {
+  @apply mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300;
+}
+
+@utility display {
+  @apply font-display font-extrabold tracking-wide uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
