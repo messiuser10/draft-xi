@@ -2,6 +2,7 @@ import type { GameEvent, GameSnapshot, ParticipantView } from '@draft-xi/server/
 import { useEffect } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { create } from 'zustand';
+import { play } from './sound';
 
 type Ack<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } };
 
@@ -122,6 +123,7 @@ export const useGames = create<GamesState>((set) => ({
           if (snap.me.participantId === event.participantId) next.me = { ...snap.me, participantId: null };
           break;
         case 'game:updated':
+          if (snap.game.status === 'lobby' && event.game.status === 'drafting') play('whistle');
           next.game = event.game;
           next.me = { ...snap.me, isHost: snap.me.userId !== null && event.game.hostUserId === snap.me.userId };
           next.participants = snap.participants.map((p) => ({
@@ -145,6 +147,7 @@ export const useGames = create<GamesState>((set) => ({
           if (snap.draft && !snap.draft.picks.some((p) => p.pickNumber === event.pick.pickNumber)) {
             next.draft = { ...snap.draft, picks: [...snap.draft.picks, event.pick], pack: null };
           }
+          play('chime');
           useToasts.getState().push(`${event.teamName} drafted ${event.playerName}${event.pick.autoPicked ? ' (auto-pick)' : ''}`);
           break;
         case 'draft:undo':
@@ -153,6 +156,7 @@ export const useGames = create<GamesState>((set) => ({
           useToasts.getState().push(`The host undid pick ${event.pickNumber}`);
           break;
         case 'playback:updated':
+          if (event.playback.playing && !snap.playback?.playing) play('whistle');
           next.playback = event.playback;
           break;
         case 'game:rematch':

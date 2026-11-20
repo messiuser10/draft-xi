@@ -10,14 +10,16 @@ import { useAction } from '../lib/actions';
 import { lineupSlots, useLeague } from '../lib/league';
 import { usePool } from '../lib/pool';
 import { useGame } from '../lib/socket';
+import { PageSkeleton } from '../components/Skeleton';
+import { ErrorCard } from '../components/ErrorBoundary';
 
 const REVEAL_MS = 2500;
 
 export function RevealPage() {
   const code = (useParams().code ?? '').toUpperCase();
   const { snapshot, error } = useGame(code);
-  if (error) return <p className="card p-8 text-center">{error}</p>;
-  if (!snapshot) return <div className="card h-96 animate-pulse" />;
+  if (error) return <ErrorCard title="Could not load this page" message={error} />;
+  if (!snapshot) return <PageSkeleton />;
   const { status } = snapshot.game;
   if (status === 'lobby') return <Navigate to={`/lobby/${code}`} replace />;
   if (status === 'drafting' || status === 'paused') return <Navigate to={`/draft/${code}`} replace />;
@@ -41,7 +43,7 @@ function Reveal({ snapshot }: { snapshot: GameSnapshot }) {
     return () => clearTimeout(id);
   }, [shown, all, order.length]);
 
-  if (league.isLoading || !league.data) return <div className="card h-96 animate-pulse" aria-label="Loading teams" />;
+  if (league.isLoading || !league.data) return <PageSkeleton label="Loading teams" />;
 
   return (
     <div className="grid grid-cols-1 gap-6">

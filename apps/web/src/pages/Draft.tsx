@@ -14,9 +14,10 @@ import {
 } from '@draft-xi/engine';
 import type { GameSnapshot, ParticipantView, PickView, PoolPlayerView } from '@draft-xi/server/contracts';
 import { useQuery } from '@tanstack/react-query';
-import { type KeyboardEvent, useMemo, useState } from 'react';
+import { type KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { Chat } from '../components/Chat';
+import { ErrorCard } from '../components/ErrorBoundary';
 import { CountdownRing } from '../components/CountdownRing';
 import { Kickoff } from '../components/Kickoff';
 import { Pitch, type PitchSlot } from '../components/Pitch';
@@ -25,6 +26,7 @@ import { useAction } from '../lib/actions';
 import { api } from '../lib/api';
 import { initialsOf, type PoolData, positionsOf, TierBadge, toEngine, usePool } from '../lib/pool';
 import { patchDraft, useGame } from '../lib/socket';
+import { PageSkeleton } from '../components/Skeleton';
 
 export function DraftPage() {
   const code = (useParams().code ?? '').toUpperCase();
@@ -41,7 +43,8 @@ export function DraftPage() {
       </div>
     );
   }
-  if (!snapshot || !pool.data) return <div className="card h-96 animate-pulse" aria-label="Loading the draft" />;
+  if (pool.error) return <ErrorCard title="Could not load the player pool" message={pool.error.message} />;
+  if (!snapshot || !pool.data) return <PageSkeleton label="Loading the draft" />;
   const { status } = snapshot.game;
   if (status === 'lobby') return <Navigate to={`/lobby/${code}`} replace />;
   if (status === 'draft_complete') return <Navigate to={`/reveal/${code}`} replace />;
@@ -398,6 +401,15 @@ function PoolPanel({
   const [hideTaken, setHideTaken] = useState(false);
   const [sort, setSort] = useState<SortKey>('overall');
   const [limit, setLimit] = useState(60);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [moreFilters, setMoreFilters] = useState(false);
+  // Tapping an empty slot on the pitch opens the sheet on phones, already filtered to that slot.
+  const [lastSlot, setLastSlot] = useState(activeSlot);
+  if (lastSlot !== activeSlot) {
+    setLastSlot(activeSlot);
+    if (activeSlot) setSheetOpen(true);
+  }
+  const pickAndClose = (playerId: number, slotKey: string) => void onPick(playerId, slotKey).then(() => setSheetOpen(false));
   const queue = snapshot.draft?.myQueue ?? [];
   const teamById = new Map(snapshot.participants.map((p) => [p.id, p]));
   const nationalities = useMemo(() => [...new Set(pool.players.map((p) => p.nationality))].sort(), [pool]);
@@ -442,17 +454,46 @@ function PoolPanel({
   };
 
   return (
-    <section className="card min-w-0 p-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <>
+    <button
+      type="button"
+      className={`btn-primary fixed inset-x-4 bottom-4 z-30 shadow-2xl lg:hidden ${sheetOpen ? 'hidden' : ''} ${myTurn ? 'ring-4 ring-gold-400' : ''}`}
+      onClick={() => setSheetOpen(true)}
+      aria-controls="player-pool"
+      aria-expanded={sheetOpen}
+    >
+      {myTurn ? 'Your pick: open the player pool' : `Player pool (${list.length})`}
+    </button>
+    {sheetOpen ? <div className="fixed inset-0 z-30 bg-night-950/60 lg:hidden" aria-hidden onClick={() => setSheetOpen(false)} /> : null}
+    <section
+      id="player-pool"
+      className={`card min-w-0 p-4 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:flex max-lg:max-h-[88dvh] max-lg:flex-col max-lg:rounded-b-none max-lg:shadow-2xl max-lg:transition-transform max-lg:duration-300 ${sheetOpen ? 'max-lg:translate-y-0' : 'max-lg:pointer-events-none max-lg:invisible max-lg:translate-y-full'}`}
+      aria-label="Player pool"
+    >
+      <div className="mx-auto mb-2 h-1.5 w-12 shrink-0 rounded-full bg-slate-300 lg:hidden dark:bg-night-600" aria-hidden />
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <h2 className="display text-xl">Player pool</h2>
         {slotType ? (
           <button type="button" className="rounded-full bg-pitch-500 px-3 py-1 text-xs font-bold text-night-950" onClick={onClearSlot}>
             Filling {activeSlot} ({slotType}) ✕
           </button>
         ) : null}
-        <span className="ml-auto text-xs text-slate-500">{list.length} players</span>
+        <span className="ml-auto text-xs text-slate-500 max-sm:hidden">{list.length} players</span>
+        <button type="button" className="btn-ghost ml-auto min-h-9 px-3 text-sm lg:hidden" onClick={() => setSheetOpen(false)}>
+          Close
+        </button>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-3 flex shrink-0 gap-2 overflow-x-auto pb-1 lg:hidden" role="group" aria-label="Quick filters">
+        <Chip on={moreFilters} onClick={() => setMoreFilters((v) => !v)}>
+          Filters
+        </Chip>
+        {['', ...POSITIONS].map((pos) => (
+          <Chip key={pos || 'all'} on={position === pos} onClick={() => setPosition(pos)}>
+            {pos || 'All'}
+          </Chip>
+        ))}
+      </div>
+      <div className={`mt-3 grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 ${moreFilters ? '' : 'max-lg:[&>*:not(:first-child)]:hidden'}`}>
         <label className="col-span-2">
           <span className="sr-only">Search players</span>
           <input className="input" placeholder="Search players" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -511,7 +552,7 @@ function PoolPanel({
         </div>
       </div>
 
-      <ul className="mt-3 grid max-h-[32rem] grid-cols-1 gap-1 overflow-y-auto pr-1" onKeyDown={onKeys} aria-label="Players">
+      <ul className="mt-3 grid max-h-[32rem] min-h-0 grid-cols-1 content-start gap-1 overflow-y-auto pr-1 max-lg:max-h-none max-lg:flex-1" onKeyDown={onKeys} aria-label="Players">
         {list.length === 0 ? <li className="p-6 text-center text-sm text-slate-500">No players match these filters.</li> : null}
         {list.slice(0, limit).map((p) => {
           const taker = takenBy.get(p.id);
@@ -545,7 +586,7 @@ function PoolPanel({
                     </button>
                   ) : null}
                   {myTurn && quickSlot ? (
-                    <button type="button" className="btn-primary min-h-9 shrink-0 px-3 text-sm" disabled={busy} onClick={() => void onPick(p.id, quickSlot)}>
+                    <button type="button" className="btn-primary min-h-9 shrink-0 px-3 text-sm" disabled={busy} onClick={() => pickAndClose(p.id, quickSlot)}>
                       Draft {quickSlot}
                     </button>
                   ) : null}
@@ -563,12 +604,13 @@ function PoolPanel({
         ) : null}
       </ul>
     </section>
+    </>
   );
 }
 
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: string }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={on} className={`min-h-9 rounded-full px-3 text-sm font-semibold ${on ? 'bg-pitch-500 text-night-950' : 'bg-slate-200 dark:bg-night-700'}`}>
+    <button type="button" onClick={onClick} aria-pressed={on} className={`min-h-10 shrink-0 rounded-full px-4 text-sm font-semibold ${on ? 'bg-pitch-500 text-night-950' : 'bg-slate-200 dark:bg-night-700'}`}>
       {children}
     </button>
   );
@@ -773,8 +815,15 @@ function PlayerPanel({
   const [picking, setPicking] = useState(false);
   const [q, setQ] = useState('');
   const matches = q.length >= 2 ? pool.players.filter((p) => p.id !== player.id && p.name.toLowerCase().includes(q.toLowerCase())).slice(0, 6) : [];
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 p-2 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:w-[26rem]" role="dialog" aria-label={`${player.name} details`}>
+    <div className="fixed inset-x-0 bottom-0 z-40 p-2 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:w-[26rem]" role="dialog" aria-label={`${player.name} details`}>
       <div className="card max-h-[70dvh] overflow-y-auto p-4 shadow-2xl">
         <div className="flex items-start gap-2">
           <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">

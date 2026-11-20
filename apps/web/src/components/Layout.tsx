@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, Outlet } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router';
 import { useLogout, useMe, useSite } from '../lib/session';
 import { ensureSocket, useConnection, useToasts } from '../lib/socket';
+import { useSound } from '../lib/sound';
+import { ErrorBoundary } from './ErrorBoundary';
+import { Walkthrough } from './Walkthrough';
 
 export const DISCLAIMER = 'Unofficial fan game, not affiliated with any club, league or player.';
 
@@ -31,9 +34,14 @@ export function Layout() {
   const [dark, toggleTheme] = useTheme();
   const toasts = useToasts((s) => s.items);
   const dismiss = useToasts((s) => s.dismiss);
+  const sound = useSound();
+  const { pathname } = useLocation();
 
   return (
     <div className="flex min-h-dvh flex-col overflow-x-clip">
+      <a href="#main" className="sr-only z-50 rounded-xl bg-pitch-500 px-4 py-2 font-semibold text-night-950 focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
+        Skip to content
+      </a>
       {site?.maintenance.enabled ? (
         <div className="bg-red-600 px-4 py-2 text-center text-sm font-semibold text-white" role="status">
           {site.maintenance.message}
@@ -48,9 +56,12 @@ export function Layout() {
             <span className="grid size-9 place-items-center rounded-full ring-4 ring-pitch-500 display text-sm">XI</span>
             <span className="display hidden text-xl sm:inline">{site?.leagueName ?? 'Draft XI League'}</span>
           </Link>
-          <nav className="ml-auto flex min-w-0 items-center gap-1">
-            <Link to="/how-to-play" className="btn-ghost hidden text-sm sm:inline-flex">
-              How to play
+          <nav className="ml-auto flex min-w-0 items-center gap-1" aria-label="Main">
+            <Link to="/how-to-play" className="btn-ghost px-2 text-sm sm:px-4" aria-label="How to play">
+              <span className="sm:hidden" aria-hidden>
+                ?
+              </span>
+              <span className="hidden sm:inline">How to play</span>
             </Link>
             <Link to="/hall-of-fame" className="btn-ghost hidden text-sm md:inline-flex">
               Hall of Fame
@@ -61,7 +72,10 @@ export function Layout() {
               </Link>
             ) : null}
             <ConnectionDot />
-            <button type="button" className="btn-ghost text-sm" onClick={toggleTheme} aria-label="Toggle light and dark">
+            <button type="button" className="btn-ghost px-2 text-sm" onClick={sound.toggle} aria-pressed={sound.enabled} aria-label="Sound effects" title={sound.enabled ? 'Sound on' : 'Sound off'}>
+              {sound.enabled ? '🔊' : '🔇'}
+            </button>
+            <button type="button" className="btn-ghost px-2 text-sm" onClick={toggleTheme} aria-label="Toggle light and dark">
               {dark ? '☀︎' : '☾'}
             </button>
             {me ? (
@@ -84,15 +98,25 @@ export function Layout() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
-        <Outlet />
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 outline-none">
+        <ErrorBoundary resetKey={pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
+      <Walkthrough />
 
       <footer className="border-t border-slate-200 px-4 py-6 text-center text-xs text-slate-500 dark:border-white/5 dark:text-slate-400">
+        <nav className="mb-3 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm" aria-label="Footer">
+          <Link to="/how-to-play" className="hover:underline">How to play</Link>
+          <Link to="/hall-of-fame" className="hover:underline">Hall of Fame</Link>
+          <Link to="/leaderboard" className="hover:underline">Leaderboard</Link>
+          {me ? <Link to="/profile" className="hover:underline">Profile</Link> : null}
+          {me?.role === 'admin' ? <Link to="/admin" className="hover:underline">Admin</Link> : null}
+        </nav>
         {DISCLAIMER}
       </footer>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4" aria-live="polite">
+      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4 max-lg:bottom-20" aria-live="polite">
         {toasts.map((t) => (
           <button
             key={t.id}

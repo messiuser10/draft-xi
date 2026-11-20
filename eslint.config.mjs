@@ -11,6 +11,8 @@ export default defineConfig(
     '**/coverage/',
     'var/',
     'apps/server/drizzle/',
+    'test-results/',
+    'playwright-report/',
   ]),
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,

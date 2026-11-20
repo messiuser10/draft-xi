@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router';
+import { RouteError } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { CreatePage } from './pages/Create';
 import { DraftPage } from './pages/Draft';
@@ -37,6 +38,7 @@ const queryClient = new QueryClient({
 const router = createBrowserRouter([
   {
     element: <Layout />,
+    errorElement: <RouteError />,
     children: [
       { path: '/', element: <HomePage /> },
       { path: '/how-to-play', element: <HowToPlayPage /> },

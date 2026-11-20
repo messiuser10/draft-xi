@@ -7,6 +7,8 @@ import { api } from '../lib/api';
 import { lineupSlots } from '../lib/league';
 import { usePool } from '../lib/pool';
 import { TeamMark } from './Results';
+import { PageSkeleton } from '../components/Skeleton';
+import { ErrorCard } from '../components/ErrorBoundary';
 
 const RESULT_STYLE = { W: 'bg-pitch-500 text-night-950', D: 'bg-slate-400 text-night-950', L: 'bg-red-500 text-white' } as const;
 
@@ -34,8 +36,8 @@ export function TeamPage() {
     staleTime: Infinity,
     queryFn: () => api<TeamPageView>(`/api/games/${code}/teams/${teamId}${season ? `?season=${season}` : ''}`),
   });
-  if (q.error) return <p className="card p-8 text-center">{q.error.message}</p>;
-  if (!q.data) return <div className="card h-96 animate-pulse" aria-label="Loading team" />;
+  if (q.error) return <ErrorCard title="Could not load this page" message={q.error.message} />;
+  if (!q.data) return <PageSkeleton label="Loading team" />;
   const d = q.data;
   const byPlayer = new Map(d.players.map((p) => [p.slotKey, p]));
   return (

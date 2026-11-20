@@ -1,0 +1,34 @@
+# Draft XI League with Postgres. Start with: docker compose up --build
+# Open http://localhost:3000. Register with the ADMIN_USERNAME to get the admin panel.
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgres://draftxi:${POSTGRES_PASSWORD:-draftxi}@db:5432/draftxi
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      # Plain http on localhost; set to true (or remove) once an HTTPS proxy sits in front.
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: draftxi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-draftxi}
+      POSTGRES_DB: draftxi
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U draftxi -d draftxi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:

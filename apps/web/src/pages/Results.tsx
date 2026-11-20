@@ -12,6 +12,8 @@ import { api } from '../lib/api';
 import { usePool } from '../lib/pool';
 import { BAND_BORDER, bandFor, DEFAULT_BANDS, useSite } from '../lib/session';
 import { useGame, useRematch, useToasts } from '../lib/socket';
+import { PageSkeleton } from '../components/Skeleton';
+import { ErrorCard } from '../components/ErrorBoundary';
 
 export function useResults(code: string, season: number | null) {
   return useQuery({
@@ -49,8 +51,8 @@ export function ResultsPage() {
   const { snapshot } = useGame(code);
   const results = useResults(code, seasonParam);
   const pool = usePool();
-  if (results.error) return <p className="card p-8 text-center">{results.error.message}</p>;
-  if (!results.data) return <div className="card h-96 animate-pulse" aria-label="Loading results" />;
+  if (results.error) return <ErrorCard title="Could not load this page" message={results.error.message} />;
+  if (!results.data) return <PageSkeleton label="Loading results" />;
   const r = results.data;
   const teams = new Map(r.teams.map((t) => [t.id, t]));
   const champion = r.championTeamId ? teams.get(r.championTeamId) : undefined;

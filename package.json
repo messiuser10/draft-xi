@@ -17,6 +17,7 @@
     "start": "NODE_ENV=production npm run start -w @draft-xi/server",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "check": "npm run typecheck && npm run lint && npm test",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
     "@types/node": "^24.10.0",
     "concurrently": "^10.0.7",
     "eslint": "^10.15.0",

@@ -14,3 +14,7 @@ var/
 
 # Local editor and tool settings
 .claude/
+
+# Playwright output
+test-results/
+playwright-report/

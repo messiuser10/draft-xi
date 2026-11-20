@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { api } from '../lib/api';
 import { useMe } from '../lib/session';
+import { PageSkeleton } from '../components/Skeleton';
+import { ErrorCard } from '../components/ErrorBoundary';
 
 export function ProfilePage() {
   const userId = useParams().userId;
@@ -20,8 +22,8 @@ export function ProfilePage() {
       </div>
     );
   }
-  if (q.error) return <p className="card p-8 text-center">{q.error.message}</p>;
-  if (!q.data) return <div className="card h-64 animate-pulse" aria-label="Loading profile" />;
+  if (q.error) return <ErrorCard title="Could not load this page" message={q.error.message} />;
+  if (!q.data) return <PageSkeleton label="Loading profile" />;
   const p = q.data;
   const stats: [string, string][] = [
     ['Games played', String(p.gamesPlayed)],

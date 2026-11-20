@@ -26,12 +26,14 @@ import { api } from '../lib/api';
 import { useSeason } from '../lib/league';
 import { BAND_BORDER, bandFor, useSite } from '../lib/session';
 import { serverNow, useGame } from '../lib/socket';
+import { PageSkeleton } from '../components/Skeleton';
+import { ErrorCard } from '../components/ErrorBoundary';
 
 export function SeasonPage() {
   const code = (useParams().code ?? '').toUpperCase();
   const { snapshot, error } = useGame(code);
-  if (error) return <p className="card p-8 text-center">{error}</p>;
-  if (!snapshot) return <div className="card h-96 animate-pulse" />;
+  if (error) return <ErrorCard title="Could not load this page" message={error} />;
+  if (!snapshot) return <PageSkeleton />;
   const { status } = snapshot.game;
   if (status === 'lobby') return <Navigate to={`/lobby/${code}`} replace />;
   if (status === 'drafting' || status === 'paused') return <Navigate to={`/draft/${code}`} replace />;
@@ -97,8 +99,9 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
   const [ticker, setTicker] = useState<FixtureView | null>(null);
   const [mobileTab, setMobileTab] = useState<'results' | 'table'>('results');
   const [viewDay, setViewDay] = useState<number | null>(null);
+  const [touchX, setTouchX] = useState<number | null>(null);
 
-  if (!season.data) return <div className="card h-96 animate-pulse" aria-label="Loading the season" />;
+  if (!season.data) return <PageSkeleton label="Loading the season" />;
   const data = season.data;
   const teams = new Map(data.teams.map((t) => [t.id, t]));
   const md = playback.matchday;
@@ -138,8 +141,17 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
-        <section className={`card p-4 ${mobileTab === 'results' ? '' : 'hidden lg:block'}`}>
+      {/* On phones the results and the table are tabs; a horizontal swipe switches between them. */}
+      <div
+        className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]"
+        onTouchStart={(e) => setTouchX(e.touches[0]?.clientX ?? null)}
+        onTouchEnd={(e) => {
+          const end = e.changedTouches[0]?.clientX;
+          if (touchX !== null && end !== undefined && Math.abs(end - touchX) > 60) setMobileTab(end < touchX ? 'table' : 'results');
+          setTouchX(null);
+        }}
+      >
+        <section className={`card animate-reveal p-4 ${mobileTab === 'results' ? '' : 'hidden lg:block'}`}>
           <div className="flex items-center gap-2">
             <h2 className="display min-w-0 flex-1 text-xl">{md === 0 ? 'Matchday 1 fixtures' : `Matchday ${shownDay} results`}</h2>
             {md > 0 ? (
@@ -162,7 +174,7 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
           </ul>
           <KeyMoments season={data} upTo={md} />
         </section>
-        <section className={`card p-4 ${mobileTab === 'table' ? '' : 'hidden lg:block'}`}>
+        <section className={`card animate-reveal p-4 ${mobileTab === 'table' ? '' : 'hidden lg:block'}`}>
           <h2 className="display text-xl">Table</h2>
           <LeagueTable rows={table} prev={prevTable} teams={teams} final={done} />
         </section>

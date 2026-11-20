@@ -17,7 +17,7 @@ Unofficial fan game, not affiliated with any club, league or player.
 | M4 | Season: stored simulation, synchronized or own-pace playback, matchday results, live table, match ticker, key moments, League Teams, Run It Back, multi-season, Expected Strength (Monte Carlo) | Done |
 | M5 | Results: awards, draft grades and pick tags, team pages, head to head, share text and image, export, rematch, profiles, Hall of Fame, leaderboard, record book | Done |
 | M6 | Admin panel: overview and data health, players (search, inline and bulk edit, import and export with diff preview, duplicates, rebalance), clubs (colours, pool, strength override, custom clubs, AI preview), games, settings, Simulation Lab and Test Draft, users, audit log, announcements | Done |
-| M7 | Polish: mobile, motion, accessibility, Docker, Playwright smoke test | Next |
+| M7 | Polish: How to Play and first-visit walkthrough, error boundary and skeleton loaders, sound toggle, phone draft room (bottom-sheet pool, filter chips) and swipeable season tabs, accessibility, Docker and docker-compose, Playwright smoke test | Done |
 
 ## Requirements
 
@@ -52,6 +52,7 @@ npm install
 | `npm run typecheck` | TypeScript strict checks for every workspace. |
 | `npm run lint` | ESLint with type-aware rules. |
 | `npm run check` | typecheck, lint and test in one go. |
+| `npm run test:e2e` | Playwright smoke test: builds the web app, starts the production server on port 3100 (`E2E_PORT`) with a fresh `var/e2e.db` and instant bots, then in Chromium signs in as a guest, creates a game, adds bots, lets bots draft every pick, starts the season and plays it to the results page. First time only: `npx playwright install chromium`. |
 
 ## Environment variables
 
@@ -164,4 +165,25 @@ npm run build
 NODE_ENV=production HOST=0.0.0.0 PORT=3000 ADMIN_USERNAME=yourname npm start
 ```
 
-Put it behind an HTTPS proxy (cookies are `Secure` in production). Docker files arrive in M7.
+Put it behind an HTTPS proxy (cookies are `Secure` in production).
+
+### Docker
+
+The `Dockerfile` builds the web app and runs the production server (API, Socket.IO and web app
+on port 3000). On its own it uses SQLite in the `/app/var` volume:
+
+```bash
+docker build -t draft-xi .
+docker run -p 3000:3000 -v draftxi-data:/app/var -e ADMIN_USERNAME=yourname -e COOKIE_SECURE=false draft-xi
+```
+
+`docker-compose.yml` runs the app with Postgres 17:
+
+```bash
+ADMIN_USERNAME=yourname docker compose up --build
+```
+
+Then open http://localhost:3000. Compose reads `ADMIN_USERNAME`, `POSTGRES_PASSWORD` (default
+`draftxi`, change it outside local use), `PORT` (host port, default 3000) and `COOKIE_SECURE`
+(default `false` for plain http on localhost; set `true` behind HTTPS). The database is migrated
+and seeded from `data/` on first boot.

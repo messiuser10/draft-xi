@@ -7,6 +7,8 @@ import { TeamBadge } from '../components/TeamBadge';
 import { lineupSlots, teamLabel, useLeague } from '../lib/league';
 import { usePool } from '../lib/pool';
 import { useGame } from '../lib/socket';
+import { PageSkeleton } from '../components/Skeleton';
+import { ErrorCard } from '../components/ErrorBoundary';
 
 export function LeaguePage() {
   const code = (useParams().code ?? '').toUpperCase();
@@ -14,8 +16,8 @@ export function LeaguePage() {
   const league = useLeague(code, `${snapshot?.game.status}:${snapshot?.draft?.picks.length}:${snapshot?.seasons.length}`);
   const pool = usePool();
   const [open, setOpen] = useState<string | null>(null);
-  if (league.error) return <p className="card p-8 text-center">{league.error.message}</p>;
-  if (!league.data) return <div className="card h-96 animate-pulse" />;
+  if (league.error) return <ErrorCard title="Could not load this page" message={league.error.message} />;
+  if (!league.data) return <PageSkeleton />;
   const back = snapshot?.game.status === 'completed' ? `/season/${code}` : `/draft/${code}`;
   return (
     <div className="grid grid-cols-1 gap-4">

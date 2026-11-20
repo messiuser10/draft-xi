@@ -154,3 +154,11 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - Reset Draft deletes every pick and restarts from pick 1 with a fresh timer. Re-run Simulation deletes every season of the game and simulates season 1 again from the game seed (Change Seed sets it).
 - Deleting a user removes the account, its sessions and chat messages; their teams in old games stay (with no user attached). Admins cannot ban, demote or delete themselves.
 - The Simulation Lab runs one season or a Monte Carlo (10 to 1,000 seasons) for any even number of in-pool clubs (each plays its best XI) or for a game's 20 teams, with optional parameter overrides that are not saved. Test Draft makes a game with the admin's team plus bots, auto-drafts every pick and simulates the season.
+- The first-visit walkthrough (4 cards) shows once per browser (remembered in localStorage) and can be replayed from How to Play; with no storage it is skipped rather than shown on every page.
+- Sound is off by default and remembered per browser. The whistle (draft opens, season playback starts) and pick chime are synthesised with WebAudio, so there are no audio files.
+- Reduced motion: a global `prefers-reduced-motion` rule shortens every animation and transition to near zero, which also stills the skeleton pulse and confetti.
+- On phones (below the `lg` breakpoint) the player pool is a bottom sheet opened from a sticky button; tapping an empty slot opens it filtered to that slot, and drafting closes it. Position chips sit on top; the other filters are behind a Filters chip.
+- Season playback on phones shows Results and Table as tabs; a horizontal swipe switches them.
+- Render errors are caught by an error boundary around each page (cleared on navigation) plus a router-level fallback.
+- The Docker image runs the server through tsx like `npm start`, so it keeps the full node_modules; there is no separate server compile step.
+- The Playwright smoke test uses a throwaway SQLite file, `BOT_PICK_DELAY_MS=0` and `START_COUNTDOWN_SECONDS=0` so a full game runs in seconds; it is not part of `npm run check` because it needs a browser download.
