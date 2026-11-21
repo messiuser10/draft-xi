@@ -177,6 +177,8 @@ export class SeasonService {
     this.hub.emit(game.id, { type: 'game:updated', game: toGameView(claimed) });
     try {
       await this.rounds?.cancelPendingTrades(game.id);
+      // Bots shop last, so the humans had first pick of the free players.
+      await this.rounds?.botTransfers(game.id, w.phase);
       if (w.phase === 'mini') {
         const [season] = await db
           .select()

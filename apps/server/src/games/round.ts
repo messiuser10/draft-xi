@@ -432,24 +432,41 @@ export class RoundService {
     if (humans.every((p) => w.ready.includes(p.id))) await this.closer!.closeWindow(gameId, null);
   }
 
-  /** A window just opened: bots make their transfers (their weakest slots first) and are done. */
+  /** A window just opened: bots are done at once (they shop when it closes, after the humans). */
   async windowOpened(gameId: number): Promise<void> {
     const game = await this.getById(gameId);
     const phase = phaseOf(game);
-    if (phase !== 'mini' && phase !== 'big') return;
+    const w = windowOf(game);
+    if (!w || (phase !== 'mini' && phase !== 'big')) return;
     const { db, t } = this.database;
     const parts = await db.select().from(t.participants).where(eq(t.participants.gameId, gameId));
     const bots = parts.filter((p) => p.isBot && p.teamName !== null);
+    const ready = [...new Set([...w.ready, ...bots.map((b) => b.id)])];
+    await db.update(t.games).set({ windowState: { ...w, ready } }).where(eq(t.games.id, gameId));
+    this.hub.resync(gameId);
+  }
+
+  /**
+   * The window is closing: bots now upgrade their weakest slots with the best free players who
+   * fit, up to the window's limit. Doing this last means humans always get first pick of the
+   * free players.
+   */
+  async botTransfers(gameId: number, phase: 'mini' | 'big'): Promise<void> {
+    const { db, t } = this.database;
+    const parts = await db.select().from(t.participants).where(eq(t.participants.gameId, gameId));
+    const bots = parts.filter((p) => p.isBot && p.teamName !== null);
+    if (bots.length === 0) return;
+    const game = await this.getById(gameId);
     const pool = await loadPool(this.database);
     const compatibility = await this.compatibility();
     const strict = settingsOf(game).strictPositions;
     const ovr = (id: number) => pool.players.find((p) => p.id === id)?.overall ?? 0;
-    for (const bot of bots) {
-      for (let n = 0; n < TRANSFER_LIMITS[phase]; n++) {
+    // Take turns, one transfer per bot per pass, so the first bot does not get every star.
+    for (let n = 0; n < TRANSFER_LIMITS[phase]; n++) {
+      for (const bot of bots) {
         const rosters = await loadRosters(this.database, gameId);
         const taken = new Set(rosters.map((r) => r.playerId));
         const mine = rosters.filter((r) => r.participantId === bot.id).sort((a, b) => ovr(a.playerId) - ovr(b.playerId));
-        let done = false;
         for (const r of mine) {
           const slot = this.slotOf(bot, r.slotKey);
           const best = pool.players
@@ -457,24 +474,14 @@ export class RoundService {
             .sort((a, b) => b.overall - a.overall)[0];
           if (!best) continue;
           try {
-            await this.applyTransfer(await this.getById(gameId), bot, r.slotKey, best.id, phase);
-            done = true;
+            await this.applyTransfer(game, bot, r.slotKey, best.id, phase);
+            break;
           } catch {
-            /* club cap or a race: try the next slot */
-            continue;
+            /* club cap or no transfers left: try the next slot */
           }
-          break;
         }
-        if (!done) break;
       }
     }
-    const fresh = await this.getById(gameId);
-    const w = windowOf(fresh);
-    if (w) {
-      const ready = [...new Set([...w.ready, ...bots.map((b) => b.id)])];
-      await db.update(t.games).set({ windowState: { ...w, ready } }).where(eq(t.games.id, gameId));
-    }
-    this.hub.resync(gameId);
   }
 
   // ---------- Series leaderboard ----------

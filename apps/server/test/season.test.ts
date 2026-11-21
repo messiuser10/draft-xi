@@ -120,6 +120,9 @@ describe.each(DIALECTS)('season on %s', (_name, open) => {
     const round = (await snap(host, code)).round!;
     expect(round.rosters[me]!.GK).toBe(keeper.id);
     expect(round.transfersUsed[me]).toBe(1);
+    // Bots wait: they only shop when the window closes, after the humans.
+    const bots = view.participants.filter((p) => p.isBot).map((p) => p.id);
+    expect(round.moves.filter((m) => m.kind === 'transfer' && bots.includes(m.participantId))).toHaveLength(0);
 
     // The only human says done: the window closes and the second half is played.
     expect((await host.post(`/api/games/${code}/window/ready`, { ready: true })).status).toBe(200);
@@ -134,6 +137,10 @@ describe.each(DIALECTS)('season on %s', (_name, open) => {
     const after = await snap(host, code);
     expect(after.playback).toMatchObject({ seasonNumber: 1, matchday: 19, cap: 38 });
     expect(after.round).toMatchObject({ phase: 'big', seasonNumber: 1, transferLimit: 3 });
+    const botMoves = after.round!.moves.filter((m) => m.kind === 'transfer' && m.windowKind === 'mini' && bots.includes(m.participantId));
+    expect(botMoves.length).toBeGreaterThan(0);
+    expect(botMoves.every((m) => m.inPlayerId !== keeper.id)).toBe(true);
+    for (const b of bots) expect(botMoves.filter((m) => m.participantId === b).length).toBeLessThanOrEqual(1);
     expect((await host.get(`/api/games/${code}/results`)).status).toBe(200);
   });
 
