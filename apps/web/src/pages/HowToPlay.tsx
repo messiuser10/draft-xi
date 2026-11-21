@@ -6,13 +6,16 @@ const STEPS = [
   ['Set up your team', 'Pick a team name, colour, monogram and formation. Ready up when you are happy; the host starts the draft.'],
   ['The league', 'There are always 20 teams. With N drafters, the 20 minus N strongest real clubs join as AI teams and play their best XI.'],
   ['Draft', 'Before every pick a wheel spins and lands on a club: you must draft one of that club\'s players into an open slot of your formation. A player must fit the slot, each player can only be drafted once, and once drafted a player is locked in that position. Miss the clock and you get an auto-pick from the spun club.'],
-  ['The season', 'Everyone plays everyone twice: 38 matchdays. Watch the table move, then see the champion, awards and draft grades.'],
+  ['Before kickoff', 'Pick a captain (they play every match with +3) and offer one-for-one trades to other teams. Both teams must accept, and the two players swap slots, so each must fit the other\'s position. Bots answer straight away.'],
+  ['A round: two seasons', 'Everyone plays everyone twice: 38 matchdays a season, two seasons a round. After matchday 19 a mini transfer window opens (1 transfer each); between the seasons the big window opens (3 transfers). Trades work in every window. When every human team says done, or the host closes the window, play goes on.'],
+  ['The leaderboard', 'After both seasons the team with the most league points over the round gets 1 point on the game leaderboard. Play again starts the next round with the same teams; Restart begins a new leaderboard from round 1.'],
 ] as const;
 
 const TIPS = [
   ['Slots and positions', 'Each slot accepts its own position and close neighbours. A slot filter appears when you tap an empty slot on the pitch.'],
   ['Chemistry', 'Every pair of players in your XI from the same real club or the same nation adds a small chemistry bonus to attack and defense, up to a cap.'],
   ['Attack and defense', 'Your forwards and creative midfielders drive attack; your keeper, defenders and holding midfielders drive defense. Balance matters more than one star.'],
+  ['Re-spin and golden spins', 'Once per draft you may re-spin the wheel on your turn. Now and then the wheel lands on a golden star: draft from any club.'],
   ['Queue', 'Star players to queue them. If the clock runs out, auto-pick takes the first queued player that still fits.'],
   ['Simulation', 'Matches are random but weighted by team strength and home advantage, so an upset is always possible. The same seed always replays the same season.'],
 ] as const;

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { ClubShield } from '../components/Kickoff';
 import { Pitch } from '../components/Pitch';
+import { SeriesLeaderboard, SquadManager } from '../components/Round';
 import { TeamBadge } from '../components/TeamBadge';
 import { useAction } from '../lib/actions';
 import { lineupSlots, useLeague } from '../lib/league';
@@ -29,7 +30,7 @@ export function RevealPage() {
 
 function Reveal({ snapshot }: { snapshot: GameSnapshot }) {
   const code = snapshot.game.code;
-  const league = useLeague(code, snapshot.draft?.picks.length);
+  const league = useLeague(code, `${snapshot.draft?.picks.length}:${snapshot.round?.moves.length ?? 0}:${JSON.stringify(snapshot.round?.captains ?? {})}`);
   const pool = usePool();
   const { run, busy } = useAction();
   const humans = (league.data?.teams ?? []).filter((t) => t.kind === 'human');
@@ -61,7 +62,7 @@ function Reveal({ snapshot }: { snapshot: GameSnapshot }) {
     <div className="grid grid-cols-1 gap-6">
       <header className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1">
-          <p className="display text-pitch-500">Draft complete</p>
+          <p className="display text-pitch-500">Round {snapshot.round?.roundNumber ?? 1} · draft complete</p>
           <h1 className="display text-4xl">Team Reveal</h1>
         </div>
         {!all ? (
@@ -82,6 +83,18 @@ function Reveal({ snapshot }: { snapshot: GameSnapshot }) {
           <p className="text-sm text-slate-500">Waiting for the host to start the season.</p>
         )}
       </header>
+
+      {snapshot.round && pool.data && snapshot.me.participantId !== null ? (
+        <section aria-labelledby="preseason-title">
+          <h2 id="preseason-title" className="display text-2xl">
+            Before kickoff: captain and trades
+          </h2>
+          <p className="mb-3 text-sm text-slate-500">
+            Pick a captain (or the best player is picked for you) and swap players with other teams. Transfers open after matchday 19.
+          </p>
+          <SquadManager snapshot={snapshot} pool={pool.data} round={snapshot.round} />
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {order.slice(0, shown).map((team) => (
@@ -111,6 +124,7 @@ function Reveal({ snapshot }: { snapshot: GameSnapshot }) {
           </Link>
         </section>
       ) : null}
+      {(snapshot.round?.roundNumber ?? 1) > 1 ? <SeriesLeaderboard code={code} refreshKey="reveal" /> : null}
     </div>
   );
 }

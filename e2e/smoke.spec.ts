@@ -1,7 +1,7 @@
-/** Creates a game, lets bots draft every pick, starts the season and plays it to the end. */
+/** Creates a game, lets bots draft every pick, then plays a whole round: two seasons and their transfer windows. */
 import { expect, test } from '@playwright/test';
 
-test('create a game, bot-draft it and play a season', async ({ page }) => {
+test('create a game, bot-draft it and play a round', async ({ page }) => {
   // Skip the first-visit walkthrough so it does not cover the page.
   await page.addInitScript(() => localStorage.setItem('walkthrough:done', '1'));
 
@@ -33,11 +33,31 @@ test('create a game, bot-draft it and play a season', async ({ page }) => {
   await page.getByRole('button', { name: 'Start Season' }).click();
 
   await expect(page).toHaveURL(/\/season\//, { timeout: 60_000 });
+  // First half, then the mid-season window: make one transfer and say done.
+  await page.getByRole('button', { name: 'Skip to mid-season' }).click();
+  await expect(page.getByRole('heading', { name: /Mid-season transfer window/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Replace', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Sign', exact: true }).first().click();
+  await expect(page.getByText('0 of 1 transfer left', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: "I'm done ✓" }).click();
+
+  // Second half: the season finishes and the summer window opens.
   await page.getByRole('button', { name: 'Skip to the end' }).click();
   await expect(page.getByRole('heading', { name: 'Full time' })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: /champion/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Summer transfer window/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Season 1 stats/ })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Season results' }).click();
+  // Season 2, both halves, then the round is over.
+  await page.getByRole('button', { name: 'Close window & play on' }).click();
+  await page.getByRole('button', { name: 'Skip to mid-season' }).click();
+  await page.getByRole('button', { name: 'Close window & play on' }).click();
+  await page.getByRole('button', { name: 'Skip to the end' }).click();
+  await expect(page.getByRole('heading', { name: 'Both seasons are in the books' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Game leaderboard/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Play again/ })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Season results' }).first().click();
   await expect(page).toHaveURL(/\/results\//);
   await expect(page.getByText(/Smoke United/).first()).toBeVisible();
   await expect(page.getByText('Unofficial fan game, not affiliated with any club, league or player.')).toBeVisible();

@@ -22,10 +22,10 @@ import {
   fitsSlot,
   totalPicks,
 } from '@draft-xi/engine';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { actorOf, type AuthUser, isUniqueViolation, requireUser } from '../auth/service';
 import { SYSTEM_ACTOR, writeAudit } from '../audit';
-import type { DraftView, GameSettings, PickView, SpinView } from '../contracts';
+import { type DraftView, type GameSettings, GOLDEN_SPIN_CHANCE, type PickView, type SpinView } from '../contracts';
 import type { AppDb, Database } from '../db/database';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../errors';
 import { getSetting } from '../settings/app-settings';
@@ -172,8 +172,43 @@ export class DraftService {
     if (game.status !== 'drafting' && game.status !== 'paused') return null;
     const p = parts.find((x) => x.id === game.currentParticipantId);
     if (!p) return null;
-    const { clubId, candidates } = this.spinOf(state, p, await loadPool(this.database), await this.compatibility());
-    return { pickNumber: game.currentPickNumber, participantId: p.id, clubId, candidates };
+    const spin = this.spinOf(state, p, await loadPool(this.database), await this.compatibility());
+    return { pickNumber: game.currentPickNumber, participantId: p.id, ...spin };
+  }
+
+  /** Club Spin: the team on the clock spins again, once per draft. The clock restarts with the reel. */
+  async respin(code: string, userIn: AuthUser | null): Promise<SpinView> {
+    const user = requireUser(userIn);
+    const state = await this.loadByCode(code);
+    const { game, parts } = state;
+    const me = parts.find((p) => p.userId === user.id);
+    if (!me) throw forbidden('You are not drafting in this game');
+    const settings = settingsOf(game);
+    if (!spinApplies(settings)) throw badRequest('no_spin', 'This draft has no Club Spin');
+    if (game.status !== 'drafting') throw conflict('not_drafting', 'The draft is not running');
+    if (game.currentParticipantId !== me.id) throw new AppError(403, 'not_your_turn', "It's not your turn");
+    if (me.respinPick !== null) throw conflict('no_respins', 'You have used your re-spin');
+    const current = this.spinOf(state, me, await loadPool(this.database), await this.compatibility());
+    if (current.clubId === null) throw conflict('no_respin_needed', 'You can already pick from any club');
+    if (current.candidates.length < 2) throw conflict('no_respin_needed', 'No other club has a player who fits');
+    const { db, t } = this.database;
+    const [updated] = await db
+      .update(t.participants)
+      .set({ respinPick: game.currentPickNumber })
+      .where(and(eq(t.participants.id, me.id), isNull(t.participants.respinPick)))
+      .returning();
+    if (!updated) throw conflict('no_respins', 'You have used your re-spin');
+    const [g] = await db
+      .update(t.games)
+      .set({ pickDeadline: deadlineFrom(settings) })
+      .where(and(eq(t.games.id, game.id), eq(t.games.currentPickNumber, game.currentPickNumber)))
+      .returning();
+    await this.emitParticipant(game.id, updated);
+    if (g) this.hub.emit(game.id, { type: 'game:updated', game: toGameView(g) });
+    await this.schedule(game.id);
+    const spin = await this.spinFor(code);
+    if (!spin) throw conflict('not_drafting', 'The draft is not running');
+    return spin;
   }
 
   /**
@@ -181,11 +216,17 @@ export class DraftService {
    * chosen from the game seed, the pick number and the team, so it is fixed for that turn
    * (reloading or undoing does not re-spin it) and every client sees the same club.
    */
-  private spinOf(state: DraftState, p: ParticipantRow, pool: Pool, compatibility: SlotCompatibility): { clubId: number | null; candidates: number[] } {
+  private spinOf(
+    state: DraftState,
+    p: ParticipantRow,
+    pool: Pool,
+    compatibility: SlotCompatibility,
+  ): { clubId: number | null; candidates: number[]; golden: boolean; respun: boolean } {
     const { game, picks } = state;
     const settings = settingsOf(game);
     const formation = formationOf(p);
-    if (!formation) return { clubId: null, candidates: [] };
+    const respun = p.respinPick !== null && p.respinPick === game.currentPickNumber;
+    if (!formation) return { clubId: null, candidates: [], golden: false, respun };
     const taken = new Set(picks.map((x) => x.playerId));
     const mine = picks.filter((x) => x.participantId === p.id);
     const open = openSlots(formation, mine.map((x) => x.slotKey));
@@ -198,9 +239,18 @@ export class DraftService {
       if (open.some((slot) => slotAccepts(player, slot, compatibility, settings.strictPositions))) eligible.add(player.clubId);
     }
     const candidates = [...eligible].sort((a, b) => a - b);
-    if (candidates.length === 0) return { clubId: null, candidates };
-    const rng = deriveRng(game.seed ?? 0, 'spin', game.currentPickNumber, p.id);
-    return { clubId: candidates[rng.int(0, candidates.length - 1)]!, candidates };
+    if (candidates.length === 0) return { clubId: null, candidates, golden: false, respun };
+    const seed = game.seed ?? 0;
+    const pick = game.currentPickNumber;
+    // A rare golden spin lets the team draft from any club.
+    if (deriveRng(seed, 'golden', pick, p.id, respun ? 'respin' : 'first').chance(GOLDEN_SPIN_CHANCE)) {
+      return { clubId: null, candidates, golden: true, respun };
+    }
+    const first = candidates[deriveRng(seed, 'spin', pick, p.id).int(0, candidates.length - 1)]!;
+    if (!respun) return { clubId: first, candidates, golden: false, respun };
+    // The re-spin lands somewhere else when it can.
+    const others = candidates.length > 1 ? candidates.filter((c) => c !== first) : candidates;
+    return { clubId: others[deriveRng(seed, 'respin', pick, p.id).int(0, others.length - 1)]!, candidates, golden: false, respun };
   }
 
   // ---------- Picks ----------

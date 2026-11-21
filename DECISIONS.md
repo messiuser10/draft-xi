@@ -163,9 +163,23 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - The Docker image runs the server through tsx like `npm start`, so it keeps the full node_modules; there is no separate server compile step.
 - The Playwright smoke test uses a throwaway SQLite file, `BOT_PICK_DELAY_MS=0` and `START_COUNTDOWN_SECONDS=0` so a full game runs in seconds; it is not part of `npm run check` because it needs a browser download.
 - Club Spin (owner request, not in the spec): a game setting (`clubSpin`), on by default for new games; games created earlier keep drafting without it. Pack Pick ignores it.
-- The spun club is derived from the game seed, pick number and team, so it is the same for every viewer and after a reload or undo; there is no re-spin.
+- The spun club is derived from the game seed, pick number and team, so it is the same for every viewer and after a reload or undo (a re-spin, see below, is seeded the same way).
 - The wheel only lands on clubs that still have an undrafted player who fits one of the team's open slots (and is under the club cap), so a legal pick always exists.
 - Each Club Spin turn gets 3 extra seconds on the pick clock, and bots wait for the reel too: twice `BOT_PICK_DELAY_MS`, at most 3 seconds (so the default 1.5s bots wait the full 3s and instant bots do not wait).
 - Drafted players are locked into the slot they were drafted into; there is no way to move them (the server never allowed it, and tapping a filled slot does nothing).
 - The footer carries the owner's credit line "made by reyansh pathak" under the disclaimer.
 - Skip to the end: the season page has a "Skip to the end" button in the header and controls. In synchronized playback the host's skip moves everyone; other viewers get "Skip to end (just me)", which jumps only their own screen, with "Back to live" to rejoin. The reveal page also has "Simulate to the end", which starts the season already on the final table.
+- Rounds (owner request): a round is exactly two seasons. Run It Back and multi-season are retired (the endpoint answers 409); Play again starts the next round instead.
+- The mid-season window opens after matchday 19 of each season, the big window after season 1. A season's first half is stored on its own (season status `simulating`, 19 tables) with the squads it was played with; when the window closes the whole season is re-simulated with the new squads from matchday 20 and replaces it. Matchdays 1-19 come out identical because every random draw is keyed by matchday and teams.
+- Transfers: 1 per team in each mini window, 3 in the big window. The new player must be on no drafted team, fit the same slot and respect the club cap; with "remove drafted from AI" on, he leaves his AI club.
+- Trades: one player for one, after the draft and in every window, both teams must accept. Positions stay locked, so each player takes the other's slot and must fit it. Offers lapse when a phase ends or a player in them moves.
+- Bots in windows: as soon as a window opens they upgrade their weakest slots with the best free players who fit (up to the window's limit) and are marked done. Bots answer trade offers at once: they accept when the player they get is rated at least as high as the one they give.
+- A window closes when every human team marks itself done, or when the host closes it.
+- Captain: +3 overall (max 99) in every match. Teams without a captain before season 1 get their highest rated player. A captain who is transferred or traded away is replaced by the incoming player.
+- Re-spin: one per team per draft, on its own turn, only when the wheel landed on a club and another club is possible. The re-spin never lands on the same club, restarts the pick clock, and is fixed by seed like the first spin.
+- Golden spin: 5% of spins (fixed by seed); the team may draft from any club. Bots and auto-picks then choose freely.
+- Game leaderboard: per series (a game and every Play again after it). One point per completed round to the team with the most league points over its two seasons (goal difference breaks ties; still level, both get a point). Bots are on it, keyed by team name; humans by account.
+- Play again keeps the series and the teams; Restart makes the same lobby but a new series with an empty leaderboard. Asking twice returns the same next lobby.
+- Season stat leaders (goals, assists, clean sheets, average rating with at least 10 appearances) are shown after each season and as half-season stats at the mid-season break, from the stored player stats.
+- Rivalries: a profile lists head-to-head records against every other signed-in or guest manager whose drafted team met yours in a finished season, across all games.
+- Hall of Fame, records, profiles and results only count finished seasons (38 matchdays).

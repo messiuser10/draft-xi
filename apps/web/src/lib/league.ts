@@ -8,9 +8,10 @@ export function useLeague(code: string, key: unknown) {
   return useQuery({ queryKey: ['league', code, key], queryFn: () => api<LeagueView>(`/api/games/${code}/league`) });
 }
 
-export function useSeason(code: string, n: number | null) {
+/** `matchdays` is part of the key: a season is stored again once its second half is played. */
+export function useSeason(code: string, n: number | null, matchdays?: number) {
   return useQuery({
-    queryKey: ['season', code, n],
+    queryKey: ['season', code, n, matchdays],
     enabled: n !== null,
     staleTime: Infinity,
     queryFn: () => api<SeasonView>(`/api/games/${code}/seasons/${n}`),

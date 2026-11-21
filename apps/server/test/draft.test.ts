@@ -219,26 +219,43 @@ describe.each(DIALECTS)('draft on %s', (_name, open) => {
   });
 
   it('Club Spin fixes a club per pick, refuses other clubs and makes auto-picks follow it', async () => {
-    type Spin = { spin: { pickNumber: number; participantId: number; clubId: number | null; candidates: number[] } | null };
-    const { host, others, code } = await startDraft({ clubSpin: true });
+    type Spin = { spin: { pickNumber: number; participantId: number; clubId: number | null; candidates: number[]; golden: boolean; respun: boolean } | null };
+    // A golden first spin (5%) allows any club; start again until the wheel lands on a club.
+    let started = await startDraft({ clubSpin: true });
+    for (let i = 0; i < 5 && (await started.host.get<Spin>(`/api/games/${started.code}/spin`)).body.spin!.golden; i++) started = await startDraft({ clubSpin: true });
+    const { host, others, code } = started;
     const guest = others[0]!;
     const view = await snap(host, code);
-    const first = (await guest.get<Spin>(`/api/games/${code}/spin`)).body.spin!;
-    expect(first.pickNumber).toBe(1);
-    expect(first.participantId).toBe(view.participants[0]!.id);
-    expect(first.clubId).not.toBeNull();
-    expect(first.candidates).toContain(first.clubId);
-    expect(first.candidates.length).toBeGreaterThan(1);
+    const spun = (await guest.get<Spin>(`/api/games/${code}/spin`)).body.spin!;
+    expect(spun.pickNumber).toBe(1);
+    expect(spun.participantId).toBe(view.participants[0]!.id);
+    expect(spun.clubId).not.toBeNull();
+    expect(spun.respun).toBe(false);
+    expect(spun.candidates).toContain(spun.clubId);
+    expect(spun.candidates.length).toBeGreaterThan(1);
     // The same turn always shows the same club.
+    expect((await host.get<Spin>(`/api/games/${code}/spin`)).body.spin).toEqual(spun);
+
+    // One re-spin per draft, only on your own turn; it lands on another club (or a golden spin).
+    expect((await guest.post(`/api/games/${code}/spin/respin`)).status).toBe(403);
+    const re = await host.post<Spin>(`/api/games/${code}/spin/respin`);
+    expect(re.status, JSON.stringify(re.body)).toBe(200);
+    const first = re.body.spin!;
+    expect(first.respun).toBe(true);
+    if (!first.golden) expect(first.clubId).not.toBe(spun.clubId);
     expect((await host.get<Spin>(`/api/games/${code}/spin`)).body.spin).toEqual(first);
+    expect((await host.post<ErrorBody>(`/api/games/${code}/spin/respin`)).body.error.code).toBe('no_respins');
+    expect((await snap(host, code)).participants[0]!.respinsLeft).toBe(0);
 
     const slots = getFormation('4-3-3').slots;
     const fits = (p: PoolPlayerView) => slots.find((s) => fitsSlot({ primaryPosition: positions(p)[0]!, altPositions: positions(p).slice(1) }, s.type));
-    const elsewhere = pool.players.find((p) => p.clubId !== first.clubId && fits(p))!;
-    const refused = await host.post<ErrorBody>(`/api/games/${code}/picks`, { playerId: elsewhere.id, slotKey: fits(elsewhere)!.key });
-    expect(refused.status).toBe(400);
-    expect(refused.body.error.code).toBe('wrong_club');
-    const fromClub = [...pool.players].sort((a, b) => b.overall - a.overall).find((p) => p.clubId === first.clubId && fits(p))!;
+    if (!first.golden) {
+      const elsewhere = pool.players.find((p) => p.clubId !== first.clubId && fits(p))!;
+      const refused = await host.post<ErrorBody>(`/api/games/${code}/picks`, { playerId: elsewhere.id, slotKey: fits(elsewhere)!.key });
+      expect(refused.status).toBe(400);
+      expect(refused.body.error.code).toBe('wrong_club');
+    }
+    const fromClub = [...pool.players].sort((a, b) => b.overall - a.overall).find((p) => (first.golden || p.clubId === first.clubId) && fits(p))!;
     expect((await host.post(`/api/games/${code}/picks`, { playerId: fromClub.id, slotKey: fits(fromClub)!.key })).status).toBe(201);
 
     // Skipping the guest's turn auto-picks from the club the wheel landed on.
@@ -247,7 +264,7 @@ describe.each(DIALECTS)('draft on %s', (_name, open) => {
     expect(second.participantId).toBe(view.participants[1]!.id);
     expect((await host.post(`/api/games/${code}/draft/skip`)).status).toBe(200);
     const auto = (await snap(host, code)).draft!.picks.find((p) => p.pickNumber === 2)!;
-    expect(pool.players.find((p) => p.id === auto.playerId)!.clubId).toBe(second.clubId);
+    if (!second.golden) expect(pool.players.find((p) => p.id === auto.playerId)!.clubId).toBe(second.clubId);
 
     // The rest of the draft completes with every pick legal.
     expect((await host.post(`/api/games/${code}/draft/end`)).status).toBe(200);

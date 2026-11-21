@@ -15,7 +15,7 @@ import {
   type SeasonResult,
   tagPick,
 } from '@draft-xi/engine';
-import { and, asc, desc, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import { actorOf, type AuthUser, requireUser } from '../auth/service';
 import { writeAudit } from '../audit';
 import {
@@ -33,6 +33,7 @@ import {
   type ProfileView,
   type RecordBookView,
   type RecordEntry,
+  type RivalView,
   type ResultsView,
   SEASON_MATCHDAYS,
   type SeasonView,
@@ -48,6 +49,7 @@ import type { DraftService } from './draft';
 import { loadPool } from './pool';
 import type { SeasonService } from './season';
 import type { GameHub, GameService } from './service';
+import { phaseOf, seriesIdOf, windowOf } from './round';
 import { type GameRow, settingsOf } from './views';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -70,9 +72,10 @@ export class ResultsService {
 
   async results(code: string, seasonNumber?: number): Promise<ResultsView> {
     const game = await this.games.getByCode(code);
-    const list = await this.seasons.list(game.id);
-    if (list.length === 0) throw conflict('not_ready', 'No season has been played yet');
+    const list = (await this.seasons.list(game.id)).filter((s) => s.matchdays >= SEASON_MATCHDAYS);
+    if (list.length === 0) throw conflict('not_ready', 'No season has been completed yet');
     const number = seasonNumber ?? list.at(-1)!.number;
+    if (!list.some((s) => s.number === number)) throw conflict('not_ready', 'That season is not finished yet');
     const season = await this.seasons.season(code, number);
     const finalTable = season.standings[SEASON_MATCHDAYS - 1] ?? season.standings.at(-1) ?? [];
     const teamById = new Map(season.teams.map((t) => [t.id, t]));
@@ -248,8 +251,8 @@ export class ResultsService {
     const game = await this.games.getByCode(code);
     const user = requireUser(userIn);
     if (game.hostUserId !== user.id && user.role !== 'admin') throw forbidden('Only the host can export results');
-    const list = await this.seasons.list(game.id);
-    if (list.length === 0) throw conflict('not_ready', 'No season has been played yet');
+    const list = (await this.seasons.list(game.id)).filter((s) => s.matchdays >= SEASON_MATCHDAYS);
+    if (list.length === 0) throw conflict('not_ready', 'No season has been completed yet');
     const seasons = [];
     for (const s of list) seasons.push(await this.results(code, s.number));
     const base = `draft-xi-${game.joinCode.toLowerCase()}`;
@@ -284,13 +287,22 @@ export class ResultsService {
     return { body: `${lines.join('\n')}\n`, contentType: 'text/csv', filename: `${base}.csv` };
   }
 
-  /** Rematch: a new lobby with the same settings and the same teams (humans not yet ready). */
-  async rematch(code: string, userIn: AuthUser | null): Promise<GameRow> {
+  /**
+   * Play again ('next'): a new lobby for the next round of the same series, so the game
+   * leaderboard carries on. Restart: the same, but a new series with a fresh leaderboard. Both
+   * keep the settings and the teams (humans not yet ready).
+   */
+  async rematch(code: string, userIn: AuthUser | null, mode: 'next' | 'restart' = 'next'): Promise<GameRow> {
     const old = await this.games.getByCode(code);
     const user = requireUser(userIn);
-    if (old.hostUserId !== user.id && user.role !== 'admin') throw forbidden('Only the host can start a rematch');
-    if (old.status !== 'completed') throw conflict('not_ready', 'Finish the season before a rematch');
+    if (old.hostUserId !== user.id && user.role !== 'admin') throw forbidden('Only the host can start a new round');
+    if (old.status !== 'completed' || phaseOf(old) !== 'over') throw conflict('not_ready', 'Finish both seasons of the round first');
     const { db, t } = this.database;
+    const w = windowOf(old);
+    if (w?.nextCode) {
+      const [existing] = await db.select().from(t.games).where(eq(t.games.joinCode, w.nextCode)).limit(1);
+      if (existing && existing.status !== 'cancelled') return existing;
+    }
     const parts = await db.select().from(t.participants).where(and(eq(t.participants.gameId, old.id), isNotNull(t.participants.teamName)));
     const hostPart = parts.find((p) => p.userId === user.id);
     const team = {
@@ -299,8 +311,14 @@ export class ResultsService {
       monogram: hostPart?.monogram ?? 'XI',
       formation: (hostPart?.formation ?? null) as FormationId | null,
     };
-    const name = old.name.startsWith('Rematch: ') ? old.name : `Rematch: ${old.name}`.slice(0, 40);
+    const name = old.name.replace(/^Rematch: /, '');
     const created = await this.games.create(user, { name, settings: settingsOf(old), team });
+    const next = mode === 'next' ? { seriesId: seriesIdOf(old), roundNumber: old.roundNumber + 1 } : { seriesId: null, roundNumber: 1 };
+    await db.update(t.games).set(next).where(eq(t.games.id, created.id));
+    await db
+      .update(t.games)
+      .set({ windowState: { ...(w ?? { phase: 'over', seasonNumber: 2, ready: [] }), nextCode: created.joinCode } })
+      .where(eq(t.games.id, old.id));
     let order = 2;
     for (const p of parts) {
       if (p.id === hostPart?.id) continue;
@@ -320,9 +338,10 @@ export class ResultsService {
         })
         .onConflictDoNothing();
     }
-    await writeAudit(db, t, { actor: actorOf(user), action: 'game.rematch', target: `game:${old.joinCode}`, gameId: old.id, details: { newCode: created.joinCode } });
+    await writeAudit(db, t, { actor: actorOf(user), action: 'game.rematch', target: `game:${old.joinCode}`, gameId: old.id, details: { newCode: created.joinCode, mode } });
     this.hub.emit(old.id, { type: 'game:rematch', code: created.joinCode });
-    return created;
+    this.hub.resync(old.id);
+    return { ...created, ...next };
   }
 
   // ---------- Profiles and history ----------
@@ -405,7 +424,52 @@ export class ResultsService {
       bestGrade: best?.grade ?? null,
       trophies,
       games,
+      rivals: await this.rivals(userId),
     };
+  }
+
+  /** Head to head against every other manager this user's teams have played, in finished seasons. */
+  private async rivals(userId: number): Promise<RivalView[]> {
+    const { db, t } = this.database;
+    const mine = await db
+      .select({ team: t.seasonTeams })
+      .from(t.seasonTeams)
+      .innerJoin(t.participants, eq(t.seasonTeams.participantId, t.participants.id))
+      .innerJoin(t.seasons, eq(t.seasonTeams.seasonId, t.seasons.id))
+      .where(and(eq(t.participants.userId, userId), eq(t.participants.isBot, false), eq(t.seasons.status, 'completed')));
+    const myTeams = new Set(mine.map((m) => m.team.id));
+    if (myTeams.size === 0) return [];
+    const ids = [...myTeams];
+    const fixtures = await db
+      .select()
+      .from(t.fixtures)
+      .where(or(inArray(t.fixtures.homeTeamId, ids), inArray(t.fixtures.awayTeamId, ids)));
+    const opponentIds = [...new Set(fixtures.map((f) => (myTeams.has(f.homeTeamId) ? f.awayTeamId : f.homeTeamId)))];
+    if (opponentIds.length === 0) return [];
+    const opponents = await db
+      .select({ team: t.seasonTeams, part: t.participants, user: t.users })
+      .from(t.seasonTeams)
+      .innerJoin(t.participants, eq(t.seasonTeams.participantId, t.participants.id))
+      .innerJoin(t.users, eq(t.participants.userId, t.users.id))
+      .where(and(inArray(t.seasonTeams.id, opponentIds), eq(t.participants.isBot, false)));
+    const managerOf = new Map(opponents.filter((o) => o.user.id !== userId).map((o) => [o.team.id, o.user]));
+    const acc = new Map<number, RivalView>();
+    for (const f of fixtures) {
+      const home = myTeams.has(f.homeTeamId);
+      const rival = managerOf.get(home ? f.awayTeamId : f.homeTeamId);
+      if (!rival) continue;
+      const gf = (home ? f.homeGoals : f.awayGoals) ?? 0;
+      const ga = (home ? f.awayGoals : f.homeGoals) ?? 0;
+      const r = acc.get(rival.id) ?? { userId: rival.id, displayName: rival.displayName, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0 };
+      r.played++;
+      r.goalsFor += gf;
+      r.goalsAgainst += ga;
+      if (gf > ga) r.won++;
+      else if (gf < ga) r.lost++;
+      else r.drawn++;
+      acc.set(rival.id, r);
+    }
+    return [...acc.values()].sort((a, b) => b.played - a.played || a.displayName.localeCompare(b.displayName)).slice(0, 12);
   }
 
   async hallOfFame(limit = 30): Promise<HallOfFameEntry[]> {
@@ -488,7 +552,7 @@ export class ResultsService {
       .innerJoin(t.seasons, eq(t.playerSeasonStats.seasonId, t.seasons.id))
       .innerJoin(t.games, eq(t.seasons.gameId, t.games.id))
       .innerJoin(t.players, eq(t.playerSeasonStats.playerId, t.players.id))
-      .where(eq(t.seasonTeams.kind, 'human'))
+      .where(and(eq(t.seasonTeams.kind, 'human'), eq(t.seasons.status, 'completed')))
       .orderBy(desc(t.playerSeasonStats.goals), asc(t.seasons.createdAt))
       .limit(1);
     const entry = (

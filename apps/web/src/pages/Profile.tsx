@@ -1,4 +1,4 @@
-/** Profile (spec section 10): games played, titles, average finish, best grade, trophy cabinet. */
+/** Profile (spec section 10): games played, titles, average finish, best grade, trophy cabinet, rivalries. */
 import type { ProfileView } from '@draft-xi/server/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
@@ -71,6 +71,37 @@ export function ProfilePage() {
         )}
       </section>
       <section className="card p-4">
+        <h2 className="display text-xl">⚔️ Rivalries</h2>
+        <p className="text-sm text-slate-500">Head to head against other managers, across every game.</p>
+        {p.rivals.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-500">No head-to-head matches yet. Play a game with friends.</p>
+        ) : (
+          <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {p.rivals.map((r) => {
+              const lead = r.won - r.lost;
+              return (
+                <li key={r.userId}>
+                  <Link to={`/profile/${r.userId}`} className="card-hover flex items-center gap-3 rounded-xl bg-slate-100 p-3 dark:bg-night-900">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">vs {r.displayName}</span>
+                      <span className="block text-xs text-slate-500">
+                        {r.played} played · goals {r.goalsFor}-{r.goalsAgainst}
+                      </span>
+                    </span>
+                    <span className="text-right tabular-nums">
+                      <span className="block font-bold">
+                        <span className="text-pitch-500">{r.won}W</span> {r.drawn}D <span className="text-red-400">{r.lost}L</span>
+                      </span>
+                      <span className="block text-xs text-slate-500">{lead > 0 ? 'You lead' : lead < 0 ? 'They lead' : 'All square'}</span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+      <section className="card p-4">
         <h2 className="display text-xl">Games</h2>
         {p.games.length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">No games yet.</p>
@@ -79,7 +110,7 @@ export function ProfilePage() {
             {p.games.map((g) => (
               <li key={g.gameCode}>
                 <Link
-                  to={g.status === 'completed' ? `/results/${g.gameCode}` : g.status === 'lobby' ? `/lobby/${g.gameCode}` : `/draft/${g.gameCode}`}
+                  to={g.status === 'completed' ? `/season/${g.gameCode}` : g.status === 'lobby' ? `/lobby/${g.gameCode}` : `/draft/${g.gameCode}`}
                   className="flex flex-wrap items-center gap-x-3 py-2 hover:opacity-80"
                 >
                   <span className="min-w-0 flex-1 truncate font-semibold">{g.gameName}</span>

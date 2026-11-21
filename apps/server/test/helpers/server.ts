@@ -53,6 +53,7 @@ export class Client {
   get = <T = Record<string, unknown>>(url: string) => this.req<T>('GET', url);
   post = <T = Record<string, unknown>>(url: string, body: unknown = {}) => this.req<T>('POST', url, body);
   patch = <T = Record<string, unknown>>(url: string, body: unknown = {}) => this.req<T>('PATCH', url, body);
+  put = <T = Record<string, unknown>>(url: string, body: unknown = {}) => this.req<T>('PUT', url, body);
   del = <T = Record<string, unknown>>(url: string) => this.req<T>('DELETE', url);
 }
 
@@ -86,3 +87,13 @@ export const waitFor = async (check: () => Promise<boolean> | boolean, timeoutMs
     await new Promise((r) => setTimeout(r, 20));
   }
 };
+
+/** Plays a whole round after the draft: season 1 first half, then the host closes each window. */
+export async function playRound(host: Client, code: string): Promise<void> {
+  const start = await host.post(`/api/games/${code}/season`);
+  if (start.status !== 201) throw new Error(`season start: ${start.status} ${JSON.stringify(start.body)}`);
+  for (let i = 0; i < 3; i++) {
+    const res = await host.post(`/api/games/${code}/window/close`);
+    if (res.status !== 200) throw new Error(`window close ${i}: ${res.status} ${JSON.stringify(res.body)}`);
+  }
+}

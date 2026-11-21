@@ -65,7 +65,7 @@ export interface GameExtensions {
     game: GameRow,
     parts: readonly ParticipantRow[],
     viewer: ParticipantRow | undefined,
-  ): Promise<Pick<GameSnapshot, 'draft' | 'seasons' | 'playback'>>;
+  ): Promise<Pick<GameSnapshot, 'draft' | 'seasons' | 'playback' | 'round'>>;
   connectionChanged(gameId: number, participantId: number, connected: boolean): Promise<void>;
   draftStarted(gameId: number): Promise<void>;
 }
@@ -217,7 +217,7 @@ export class GameService {
       .orderBy(desc(t.chatMessages.id))
       .limit(CHAT_HISTORY);
     const countdown = this.countdowns.get(gameId);
-    const extras = (await this.extensions?.snapshotExtras(game, parts, mine)) ?? { draft: null, seasons: [], playback: null };
+    const extras = (await this.extensions?.snapshotExtras(game, parts, mine)) ?? { draft: null, seasons: [], playback: null, round: null };
     return {
       game: toGameView(game),
       participants,

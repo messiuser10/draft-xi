@@ -14,16 +14,17 @@ import {
   SEASON_MATCHDAYS,
   type SeasonView,
   type StandingView,
-  type TitlesRow,
 } from '@draft-xi/server/contracts';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { ClubShield } from '../components/Kickoff';
+import { RoundOver, SeasonLeaders, SeriesLeaderboard, TransferWindow } from '../components/Round';
 import { TeamBadge } from '../components/TeamBadge';
 import { useAction } from '../lib/actions';
 import { api } from '../lib/api';
 import { useSeason } from '../lib/league';
+import { usePool } from '../lib/pool';
 import { BAND_BORDER, bandFor, useSite } from '../lib/session';
 import { serverNow, useGame } from '../lib/socket';
 import { PageSkeleton } from '../components/Skeleton';
@@ -42,7 +43,7 @@ export function SeasonPage() {
     return (
       <div className="card mx-auto max-w-md p-8 text-center" role="status">
         <p className="display text-3xl">Simulating the season…</p>
-        <p className="mt-2 text-slate-500">380 matches, one moment.</p>
+        <p className="mt-2 text-slate-500">190 matches, one moment.</p>
       </div>
     );
   }
@@ -50,9 +51,15 @@ export function SeasonPage() {
 }
 
 /** Playback that ticks: the shared state in synchronized mode, a local copy in own-pace mode. */
+/** Matchdays played so far in a season: 19 while its mid-season window is open, else 38. */
+export function capOf(snapshot: GameSnapshot, seasonNumber: number): number {
+  return snapshot.seasons.find((s) => s.number === seasonNumber)?.matchdays ?? SEASON_MATCHDAYS;
+}
+
 function usePlayback(snapshot: GameSnapshot) {
   const synced = snapshot.game.settings.playbackMode === 'synchronized';
   const shared = snapshot.playback;
+  const latest = snapshot.seasons.at(-1);
   const [local, setLocal] = useState<PlaybackState>(() => {
     // "Simulate to the end" on the reveal page opens the season on the final table.
     let skip = false;
@@ -62,19 +69,30 @@ function usePlayback(snapshot: GameSnapshot) {
     } catch {
       /* storage unavailable */
     }
-    return {
-      seasonNumber: shared?.seasonNumber ?? snapshot.seasons.at(-1)?.number ?? 1,
-      matchday: skip ? SEASON_MATCHDAYS : 0,
-      playing: !skip,
-      speed: 1,
-      anchorAt: new Date().toISOString(),
-    };
+    const seasonNumber = shared?.seasonNumber ?? snapshot.seasons.at(-1)?.number ?? 1;
+    const cap = capOf(snapshot, seasonNumber);
+    return { seasonNumber, matchday: skip ? cap : 0, playing: !skip, speed: 1, anchorAt: new Date().toISOString(), cap };
   });
-  // A viewer who cannot control synchronized playback can still jump to the end on their own screen.
-  const [personal, setPersonal] = useState<PlaybackState | null>(null);
-  const state = personal ?? (synced && shared ? shared : local);
   const clock = synced ? serverNow : Date.now;
   const [now, setNow] = useState(() => clock());
+  // Own pace: when the next half or the next season arrives, carry on from where this screen is.
+  const progress = `${latest?.number ?? 0}:${latest?.matchdays ?? 0}`;
+  const [seen, setSeen] = useState(progress);
+  if (seen !== progress) {
+    setSeen(progress);
+    const t = now;
+    const at = playbackMatchday(local, t);
+    if (latest && latest.number !== local.seasonNumber) {
+      setLocal({ ...local, seasonNumber: latest.number, matchday: 0, playing: true, anchorAt: new Date(t).toISOString(), cap: latest.matchdays });
+    } else {
+      setLocal({ ...local, matchday: at, playing: true, anchorAt: new Date(t).toISOString(), cap: capOf(snapshot, local.seasonNumber) });
+    }
+  }
+  // A viewer who cannot control synchronized playback can still jump to the end on their own screen.
+  const [personal, setPersonal] = useState<PlaybackState | null>(null);
+  const base = personal ?? (synced && shared ? shared : local);
+  const cap = capOf(snapshot, base.seasonNumber);
+  const state: PlaybackState = { ...base, cap: Math.min(base.cap ?? SEASON_MATCHDAYS, cap) };
   useEffect(() => {
     if (!state.playing) return;
     const id = setInterval(() => setNow(clock()), 250);
@@ -93,26 +111,30 @@ function usePlayback(snapshot: GameSnapshot) {
     const cur = playbackMatchday(local, t);
     let next: PlaybackState = { ...local, matchday: cur, anchorAt: new Date(t).toISOString() };
     if (extra.seasonNumber !== undefined && extra.seasonNumber !== local.seasonNumber) next = { ...next, seasonNumber: extra.seasonNumber, matchday: 0 };
-    if (action === 'play') next = { ...next, playing: true, matchday: next.matchday >= SEASON_MATCHDAYS ? 0 : next.matchday };
+    const c = capOf(snapshot, next.seasonNumber);
+    next = { ...next, cap: c };
+    if (action === 'play') next = { ...next, playing: true, matchday: next.matchday >= c ? 0 : next.matchday };
     if (action === 'pause') next = { ...next, playing: false };
     if (action === 'speed' && extra.speed) next = { ...next, speed: extra.speed };
-    if (action === 'jump' && extra.matchday !== undefined) next = { ...next, matchday: extra.matchday };
-    if (action === 'end') next = { ...next, matchday: SEASON_MATCHDAYS, playing: false };
+    if (action === 'jump' && extra.matchday !== undefined) next = { ...next, matchday: Math.min(c, extra.matchday) };
+    if (action === 'end') next = { ...next, matchday: c, playing: false };
     setLocal(next);
     setNow(t);
   };
   const skipToEnd = () => {
     if (canControl) control('end');
-    else setPersonal({ ...state, matchday: SEASON_MATCHDAYS, playing: false, anchorAt: new Date().toISOString() });
+    else setPersonal({ ...state, matchday: cap, playing: false, anchorAt: new Date().toISOString() });
   };
   const backToLive = () => setPersonal(null);
-  return { state, matchday, control, canControl, synced, skipToEnd, backToLive, personal: personal !== null };
+  return { state, matchday, cap, control, canControl, synced, skipToEnd, backToLive, personal: personal !== null };
 }
 
 function Season({ snapshot }: { snapshot: GameSnapshot }) {
   const code = snapshot.game.code;
   const playback = usePlayback(snapshot);
-  const season = useSeason(code, playback.state.seasonNumber);
+  // Keyed by what the list says was played, so a season stored again after its second half is refetched.
+  const season = useSeason(code, playback.state.seasonNumber, snapshot.seasons.find((s) => s.number === playback.state.seasonNumber)?.matchdays ?? 0);
+  const pool = usePool();
   const [ticker, setTicker] = useState<FixtureView | null>(null);
   const [mobileTab, setMobileTab] = useState<'results' | 'table'>('results');
   const [viewDay, setViewDay] = useState<number | null>(null);
@@ -121,19 +143,30 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
   if (!season.data) return <PageSkeleton label="Loading the season" />;
   const data = season.data;
   const teams = new Map(data.teams.map((t) => [t.id, t]));
-  const md = playback.matchday;
+  // Never past what the loaded season holds (it may be a moment behind the playback state).
+  const md = Math.min(playback.matchday, data.standings.length);
   // While playing, follow the live matchday; a user can browse back to an earlier one.
   const shownDay = viewDay !== null && viewDay <= md ? viewDay : md;
   const table = md > 0 ? data.standings[md - 1]! : initialTable(data);
   const prevTable = md > 1 ? data.standings[md - 2] : undefined;
   const fixtures = data.fixtures.filter((f) => f.matchday === Math.max(1, shownDay));
-  const done = md >= SEASON_MATCHDAYS;
+  const done = md >= SEASON_MATCHDAYS && data.standings.length >= SEASON_MATCHDAYS;
+  const cap = playback.cap;
+  // The mid-season break: the first half is over and the window is open.
+  const atBreak = cap < SEASON_MATCHDAYS && md >= cap;
+  const round = snapshot.round;
+  const latest = snapshot.seasons.at(-1)?.number ?? 1;
+  const isLatest = data.number === latest;
+  const showWindow =
+    round !== null && isLatest && ((round.phase === 'mini' && atBreak) || (round.phase === 'big' && done && round.seasonNumber === data.number));
+  const showRoundOver = round !== null && round.phase === 'over' && isLatest && done;
+  const busy = snapshot.game.status === 'simulating';
   const skipToEnd = () => {
     playback.skipToEnd();
     setViewDay(null);
     setMobileTab('table');
-    // Bring the champion into view once the final table is shown.
-    setTimeout(() => document.getElementById('champion')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
+    // Bring the champion (or the transfer window) into view once the table is shown.
+    setTimeout(() => (document.getElementById('window') ?? document.getElementById('champion'))?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
   };
 
   return (
@@ -141,9 +174,9 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
       <header className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1">
           <p className="display text-pitch-500">
-            {snapshot.game.name} · Season {data.number}
+            {snapshot.game.name} · Round {round?.roundNumber ?? 1} · Season {data.number} of 2
           </p>
-          <h1 className="display text-4xl">{md === 0 ? 'Kickoff' : done ? 'Full time' : `Matchday ${md} of ${SEASON_MATCHDAYS}`}</h1>
+          <h1 className="display text-4xl">{md === 0 ? 'Kickoff' : done ? 'Full time' : atBreak ? 'Half-way: transfer window' : `Matchday ${md} of ${SEASON_MATCHDAYS}`}</h1>
         </div>
         <Link to={`/league/${code}`} className="btn-ghost">
           League Teams
@@ -152,9 +185,9 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
           <Link to={`/results/${code}?season=${data.number}`} className="btn-primary">
             Season results →
           </Link>
-        ) : (
+        ) : atBreak ? null : (
           <button type="button" className="btn-primary" onClick={skipToEnd}>
-            ⏭ Skip to the end
+            {cap < SEASON_MATCHDAYS ? '⏭ Skip to mid-season' : '⏭ Skip to the end'}
           </button>
         )}
         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-night-700" role="progressbar" aria-label="Season progress" aria-valuemin={0} aria-valuemax={SEASON_MATCHDAYS} aria-valuenow={md}>
@@ -164,7 +197,15 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
 
       <Controls snapshot={snapshot} playback={playback} onSkip={skipToEnd} />
 
+      {busy && isLatest ? (
+        <section className="card p-4 text-center" role="status">
+          <p className="display text-2xl">Simulating the next half…</p>
+        </section>
+      ) : null}
       {done ? <ChampionBanner season={data} teams={teams} /> : null}
+      {showWindow && pool.data ? <TransferWindow snapshot={snapshot} pool={pool.data} /> : null}
+      {showRoundOver ? <RoundOver snapshot={snapshot} /> : null}
+      {done ? <SeasonLeaders season={data} title={`Season ${data.number} stats`} /> : atBreak ? <SeasonLeaders season={data} title="Half-season stats" /> : null}
 
       <div className="flex gap-1 lg:hidden" role="tablist">
         {(['results', 'table'] as const).map((k) => (
@@ -228,14 +269,14 @@ function initialTable(season: SeasonView): StandingView[] {
 // ---------- Controls ----------
 
 function Controls({ snapshot, playback, onSkip }: { snapshot: GameSnapshot; playback: ReturnType<typeof usePlayback>; onSkip: () => void }) {
-  const { state, matchday, control, canControl, synced, personal, backToLive } = playback;
+  const { state, matchday, control, canControl, synced, personal, backToLive, cap } = playback;
   const seasons = snapshot.seasons;
   return (
     <section className="card flex flex-wrap items-center gap-2 p-3" aria-label="Playback controls">
       {canControl ? (
         <>
           <button type="button" className="btn-primary min-w-24" onClick={() => control(state.playing ? 'pause' : 'play')}>
-            {state.playing ? 'Pause' : matchday >= SEASON_MATCHDAYS ? 'Replay' : 'Play'}
+            {state.playing ? 'Pause' : matchday >= cap ? 'Replay' : 'Play'}
           </button>
           <div className="flex gap-1" role="group" aria-label="Speed">
             {([1, 2, 5] as const).map((s) => (
@@ -243,13 +284,13 @@ function Controls({ snapshot, playback, onSkip }: { snapshot: GameSnapshot; play
                 {s}x
               </button>
             ))}
-            <button type="button" className="btn-secondary" onClick={onSkip} disabled={matchday >= SEASON_MATCHDAYS}>
-              ⏭ Skip to end
+            <button type="button" className="btn-secondary" onClick={onSkip} disabled={matchday >= cap}>
+              ⏭ {cap < SEASON_MATCHDAYS ? 'Skip to MD 19' : 'Skip to end'}
             </button>
           </div>
           <label className="flex min-w-48 flex-1 items-center gap-2 text-sm">
             <span className="text-slate-500">MD</span>
-            <input type="range" min={0} max={SEASON_MATCHDAYS} value={matchday} onChange={(e) => control('jump', { matchday: Number(e.target.value) })} className="flex-1 accent-pitch-500" aria-label="Jump to matchday" />
+            <input type="range" min={0} max={cap} value={matchday} onChange={(e) => control('jump', { matchday: Number(e.target.value) })} className="flex-1 accent-pitch-500" aria-label="Jump to matchday" />
             <span className="w-6 tabular-nums">{matchday}</span>
           </label>
         </>
@@ -262,7 +303,7 @@ function Controls({ snapshot, playback, onSkip }: { snapshot: GameSnapshot; play
             <button type="button" className="btn-secondary" onClick={backToLive}>
               Back to live
             </button>
-          ) : matchday < SEASON_MATCHDAYS ? (
+          ) : matchday < cap ? (
             <button type="button" className="btn-secondary" onClick={onSkip}>
               ⏭ Skip to end (just me)
             </button>
@@ -536,79 +577,20 @@ function Ticker({ fixture, teams, onClose }: { fixture: FixtureView; teams: Map<
 
 function Extras({ snapshot }: { snapshot: GameSnapshot }) {
   const code = snapshot.game.code;
-  const isHost = snapshot.me.isHost || snapshot.me.isAdmin;
-  const { run, busy } = useAction();
-  const qc = useQueryClient();
-  const [count, setCount] = useState(5);
   const [showMc, setShowMc] = useState(false);
-  const history = useQuery({
-    queryKey: ['seasons', code, snapshot.seasons.length],
-    queryFn: () => api<{ titles: TitlesRow[] }>(`/api/games/${code}/seasons`),
-  });
   const mc = useQuery({
-    queryKey: ['montecarlo', code],
+    queryKey: ['montecarlo', code, snapshot.round?.moves.length ?? 0],
     enabled: showMc,
     staleTime: Infinity,
     queryFn: () => api<MonteCarloView>(`/api/games/${code}/montecarlo?runs=1000`),
   });
-  const runMore = async (n: number) => {
-    await run(`/api/games/${code}/seasons`, 'POST', { count: n });
-    void qc.invalidateQueries({ queryKey: ['seasons', code] });
-  };
-  const busySim = snapshot.game.status === 'simulating';
+  const showBoard = snapshot.round !== null && snapshot.round.phase !== 'over';
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <section className="card p-4">
-        <h2 className="display text-xl">More seasons</h2>
-        {isHost ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" className="btn-primary" disabled={busy || busySim} onClick={() => void runMore(1)}>
-              Run It Back
-            </button>
-            <label className="flex items-center gap-2 text-sm">
-              <span>Multi-season</span>
-              <select className="input min-h-11 w-20" value={count} onChange={(e) => setCount(Number(e.target.value))}>
-                {Array.from({ length: 9 }, (_, i) => i + 2).map((n) => (
-                  <option key={n}>{n}</option>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="btn-secondary" disabled={busy || busySim} onClick={() => void runMore(count)}>
-              Simulate {count} seasons
-            </button>
-          </div>
-        ) : (
-          <p className="mt-2 text-sm text-slate-500">The host can replay the season with a new seed or run several at once.</p>
-        )}
-        {snapshot.seasons.length > 1 && history.data ? (
-          <>
-            <h3 className="display mt-4 text-lg">Titles across {snapshot.seasons.length} seasons</h3>
-            <table className="mt-1 w-full text-sm">
-              <thead className="text-xs text-slate-500">
-                <tr>
-                  <th className="text-left">Team</th>
-                  <th>Titles</th>
-                  <th>Avg pos</th>
-                  <th>Avg pts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.data.titles.slice(0, 10).map((r) => (
-                  <tr key={r.name} className={r.kind === 'human' ? 'font-semibold text-pitch-600 dark:text-pitch-400' : ''}>
-                    <td className="truncate py-0.5">{r.name}</td>
-                    <td className="text-center tabular-nums">{r.titles}</td>
-                    <td className="text-center tabular-nums">{r.avgPosition.toFixed(1)}</td>
-                    <td className="text-center tabular-nums">{r.avgPoints.toFixed(1)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        ) : null}
-      </section>
+      {showBoard ? <SeriesLeaderboard code={code} refreshKey={`${snapshot.round?.phase}:${snapshot.seasons.map((s) => s.matchdays).join(',')}`} /> : null}
       <section className="card p-4">
         <h2 className="display text-xl">Expected Strength</h2>
-        <p className="text-sm text-slate-500">1,000 simulated seasons of these 20 teams.</p>
+        <p className="text-sm text-slate-500">1,000 simulated seasons of these 20 teams as they stand now.</p>
         {!showMc ? (
           <button type="button" className="btn-secondary mt-3" onClick={() => setShowMc(true)}>
             Run 1,000 seasons

@@ -17,6 +17,7 @@ import { AppError } from '../errors';
 import { DraftService } from '../games/draft';
 import { AdminService } from '../admin/service';
 import { ResultsService } from '../games/results';
+import { RoundService } from '../games/round';
 import { SeasonService } from '../games/season';
 import { GameService, NULL_HUB } from '../games/service';
 import { createRealtime } from '../realtime/socket';
@@ -39,6 +40,7 @@ export interface ServerContext {
   games: GameService;
   draft: DraftService;
   seasons: SeasonService;
+  rounds: RoundService;
   results: ResultsService;
   admin: AdminService;
   /** Sets or clears the session cookie. */
@@ -79,12 +81,16 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
     autoStartSeasonMs: 10_000,
   });
   const seasons = new SeasonService(database, NULL_HUB, draft);
+  const rounds = new RoundService(database, NULL_HUB);
+  seasons.setRounds(rounds);
+  rounds.setCloser(seasons);
   const results = new ResultsService(database, seasons, draft, games, NULL_HUB);
   const admin = new AdminService(database, games, draft, seasons, NULL_HUB);
   games.setExtensions({
     snapshotExtras: async (game, parts, viewer) => ({
       draft: await draft.draftView(game, parts, viewer),
       ...(await seasons.snapshotExtras(game)),
+      round: await rounds.view(game),
     }),
     connectionChanged: (gameId, participantId, connected) => draft.connectionChanged(gameId, participantId, connected),
     draftStarted: (gameId) => draft.schedule(gameId),
@@ -97,6 +103,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
     games,
     draft,
     seasons,
+    rounds,
     results,
     admin,
     setSession(reply, token) {
@@ -165,6 +172,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
   games.setHub(hub);
   draft.setHub(hub);
   seasons.setHub(hub);
+  rounds.setHub(hub);
   results.setHub(hub);
   admin.setHub(hub);
 

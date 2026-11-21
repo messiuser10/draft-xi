@@ -31,7 +31,7 @@ export const WALKTHROUGH = [
   ['Welcome to Draft XI League', 'Draft a starting XI from 20 real clubs, then watch your team play a full 38-matchday season against friends and AI clubs.'],
   ['Create or join', 'Start a game and share the 6-letter code. Friends join as guests with just a name. Empty seats can be filled by bots.'],
   ['Draft your XI', 'Before each pick a wheel spins to choose a club, and you draft one of its players into your formation. Once picked, a player stays in that position.'],
-  ['Play the season', 'Everyone plays everyone twice. The table moves live, then you get a champion, awards and a grade for every draft.'],
+  ['Play the round', 'Two seasons per round, with transfer windows mid-season and between seasons. The team with the most points over both wins a leaderboard point.'],
 ] as const;
 
 export function Walkthrough() {

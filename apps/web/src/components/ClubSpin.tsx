@@ -1,6 +1,7 @@
 /**
  * Club Spin: before each pick a reel of club badges spins and lands on the club the team on the
- * clock must draft from. The server decides the club; this only animates towards it.
+ * clock must draft from. The server decides the club; this only animates towards it. A rare
+ * golden spin lands on a gold star (any club), and each team may re-spin once per draft.
  */
 import type { SpinView } from '@draft-xi/server/contracts';
 import { useQuery } from '@tanstack/react-query';
@@ -13,41 +14,55 @@ import { ClubShield } from './Kickoff';
 const ITEM = 76; // px per reel cell
 const LAPS = 5;
 
-export function useSpin(code: string, pickNumber: number, enabled: boolean) {
+/** `respinsLeft` of the team on the clock is in the key, so a re-spin fetches the new club. */
+export function useSpin(code: string, pickNumber: number, enabled: boolean, respinsLeft = 0) {
   return useQuery({
-    queryKey: ['spin', code, pickNumber],
+    queryKey: ['spin', code, pickNumber, respinsLeft],
     queryFn: () => api<{ spin: SpinView | null }>(`/api/games/${code}/spin`).then((r) => r.spin),
     enabled,
     staleTime: Infinity,
   });
 }
 
+/** Identifies one spin of one pick (a re-spin is a new one). */
+export const spinKey = (spin: Pick<SpinView, 'pickNumber' | 'respun'>) => `${spin.pickNumber}:${spin.respun ? 'r' : 'f'}`;
+
+const GOLD = -1;
+
 export function ClubSpin({
   spin,
   pool,
   teamName,
   myTurn,
+  respinsLeft,
+  onRespin,
+  respinBusy,
   onLanded,
 }: {
   spin: SpinView;
   pool: PoolData;
   teamName: string;
   myTurn: boolean;
-  onLanded: (pickNumber: number) => void;
+  respinsLeft: number;
+  onRespin: () => void;
+  respinBusy: boolean;
+  onLanded: (key: string) => void;
 }) {
   const [go, setGo] = useState(false);
   const [landed, setLanded] = useState(false);
-  const target = spin.clubId;
+  const target = spin.golden ? GOLD : spin.clubId;
 
-  // Rotate the order per pick so the reel looks different each time.
+  // Rotate the order per pick so the reel looks different each time; a gold star now and then.
   const ring = spin.candidates.length > 0 ? spin.candidates.map((_, i) => spin.candidates[(i + spin.pickNumber) % spin.candidates.length]!) : [];
-  const strip = [...Array.from({ length: LAPS }, () => ring).flat(), ...(target === null ? [] : [target])];
+  const laps = Array.from({ length: LAPS }, (_, lap) => (lap === 2 && ring.length > 3 ? [...ring.slice(0, 3), GOLD, ...ring.slice(3)] : ring)).flat();
+  const strip = [...laps, ...(target === null ? [] : [target])];
   const stopAt = strip.length - 1;
+  const key = spinKey(spin);
 
   useEffect(() => {
     const finish = () => {
       setLanded(true);
-      onLanded(spin.pickNumber);
+      onLanded(key);
     };
     if (target === null) {
       const id = setTimeout(finish, 0);
@@ -66,16 +81,28 @@ export function ClubSpin({
       cancelAnimationFrame(start);
       clearTimeout(done);
     };
-  }, [spin.pickNumber, target, onLanded]);
+  }, [key, target, onLanded]);
 
-  const club = target === null ? undefined : pool.clubsById.get(target);
+  const golden = spin.golden;
+  const club = target === null || golden ? undefined : pool.clubsById.get(target);
+  const canRespin = myTurn && landed && respinsLeft > 0 && !golden && spin.clubId !== null && spin.candidates.length > 1;
   return (
-    <section className={`card overflow-hidden p-4 ${myTurn ? 'ring-2 ring-gold-400' : ''}`} aria-live="polite">
+    <section
+      className={`card overflow-hidden p-4 ${golden && landed ? 'bg-gradient-to-br from-gold-400/30 to-transparent ring-2 ring-gold-400' : myTurn ? 'ring-2 ring-gold-400' : ''}`}
+      aria-live="polite"
+    >
       <div className="flex flex-wrap items-baseline gap-x-2">
-        <h2 className="display text-xl">Club spin</h2>
-        <p className="text-sm text-slate-500">
-          Pick {spin.pickNumber} · {myTurn ? 'you must' : `${teamName} must`} draft from this club
+        <h2 className="display text-xl">{spin.respun ? 'Re-spin' : 'Club spin'}</h2>
+        <p className="min-w-0 flex-1 text-sm text-slate-500">
+          Pick {spin.pickNumber} · {golden && landed ? `${myTurn ? 'you' : teamName} may draft from any club` : `${myTurn ? 'you must' : `${teamName} must`} draft from this club`}
         </p>
+        {canRespin ? (
+          <button type="button" className="btn-secondary min-h-9 py-0 text-sm" disabled={respinBusy} onClick={onRespin} title="Spin again, once per draft">
+            🎲 Re-spin (1 left)
+          </button>
+        ) : myTurn && respinsLeft === 0 && !spin.respun ? (
+          <span className="text-xs text-slate-500">Re-spin used</span>
+        ) : null}
       </div>
       {target === null ? (
         <p className="mt-3 text-sm text-slate-500">No club has a player who fits an open slot, so any player may be picked.</p>
@@ -94,7 +121,13 @@ export function ClubSpin({
                 return (
                   <span key={i} className="grid place-items-center" style={{ width: ITEM }}>
                     <span className={i === stopAt && landed ? 'scale-150 transition-transform duration-300' : ''}>
-                      <ClubShield primary={c?.primaryColor ?? '#334155'} secondary={c?.secondaryColor ?? '#fff'} text={c?.shortName ?? '?'} />
+                      {id === GOLD ? (
+                        <span className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-gold-400 to-gold-500 text-2xl shadow-lg" aria-hidden>
+                          ★
+                        </span>
+                      ) : (
+                        <ClubShield primary={c?.primaryColor ?? '#334155'} secondary={c?.secondaryColor ?? '#fff'} text={c?.shortName ?? '?'} />
+                      )}
                     </span>
                   </span>
                 );
@@ -103,7 +136,7 @@ export function ClubSpin({
             <span className="pointer-events-none absolute inset-y-1 left-1/2 w-[72px] -translate-x-1/2 rounded-xl ring-2 ring-gold-400" />
           </div>
           <p className="mt-3 text-center display text-2xl" role="status">
-            {landed ? club?.name ?? 'Unknown club' : 'Spinning…'}
+            {!landed ? 'Spinning…' : golden ? '✨ Golden spin! Any club' : (club?.name ?? 'Unknown club')}
           </p>
         </>
       )}

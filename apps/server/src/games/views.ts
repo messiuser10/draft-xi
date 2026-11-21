@@ -45,6 +45,7 @@ export function toGameView(game: GameRow): GameView {
     currentParticipantId: game.currentParticipantId,
     pickDeadline: game.pickDeadline?.toISOString() ?? null,
     pausedRemainingMs: game.pausedRemainingMs,
+    roundNumber: game.roundNumber,
     createdAt: game.createdAt.toISOString(),
   };
 }
@@ -66,6 +67,7 @@ export function toParticipantView(p: ParticipantRow, game: GameRow, displayName:
     isHost: p.userId !== null && p.userId === game.hostUserId,
     autoDraft: p.autoDraft,
     rerollsLeft: Math.max(0, PACK_REROLLS - p.rerollsUsed),
+    respinsLeft: p.respinPick === null ? 1 : 0,
   };
 }
 

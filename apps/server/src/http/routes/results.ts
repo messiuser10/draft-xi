@@ -2,7 +2,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireUser } from '../../auth/service';
-import { exportQuerySchema, joinCodeSchema, seasonQuerySchema } from '../../contracts';
+import { exportQuerySchema, joinCodeSchema, rematchSchema, seasonQuerySchema } from '../../contracts';
 import { toGameView } from '../../games/views';
 import type { ServerContext } from '../app';
 
@@ -31,7 +31,7 @@ export function registerResultsRoutes(app: FastifyInstance, ctx: ServerContext):
   });
 
   app.post('/api/games/:code/rematch', async (req, reply) => {
-    const game = await results.rematch(codeParams.parse(req.params).code, req.user);
+    const game = await results.rematch(codeParams.parse(req.params).code, req.user, rematchSchema.parse(req.body ?? {}).mode);
     return reply.status(201).send({ game: toGameView(game) });
   });
 

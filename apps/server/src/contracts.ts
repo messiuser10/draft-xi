@@ -179,10 +179,33 @@ export const SEASON_MATCHDAYS = 38;
 
 /** Matchday a playback state shows at `nowMs` (server time). */
 export function playbackMatchday(state: PlaybackState, nowMs: number): number {
-  if (!state.playing) return state.matchday;
+  const cap = state.cap ?? SEASON_MATCHDAYS;
+  if (!state.playing) return Math.min(cap, state.matchday);
   const elapsed = Math.max(0, nowMs - Date.parse(state.anchorAt));
-  return Math.min(SEASON_MATCHDAYS, state.matchday + Math.floor((elapsed * state.speed) / MATCHDAY_MS));
+  return Math.min(cap, state.matchday + Math.floor((elapsed * state.speed) / MATCHDAY_MS));
 }
+
+// ---------- Rounds, windows, transfers and trades ----------
+
+/** Seasons in one round; a mid-season window in each, and the big window between them. */
+export const ROUND_SEASONS = 2;
+/** Transfers each team may make per window. */
+export const TRANSFER_LIMITS = { mini: 1, big: 3 } as const;
+/** Overall points the captain gains in every match. */
+export const CAPTAIN_BOOST = 3;
+/** Club Spin: chance that a spin is golden (any club allowed). */
+export const GOLDEN_SPIN_CHANCE = 0.05;
+
+export const captainSchema = z.object({ playerId: z.number().int().positive() });
+export const transferSchema = z.object({ slotKey: z.string().min(1).max(8), playerId: z.number().int().positive() });
+export const proposeTradeSchema = z.object({
+  toParticipantId: z.number().int().positive(),
+  offerPlayerId: z.number().int().positive(),
+  requestPlayerId: z.number().int().positive(),
+});
+export const respondTradeSchema = z.object({ action: z.enum(['accept', 'decline', 'cancel']) });
+export const windowReadySchema = z.object({ ready: z.boolean() });
+export const rematchSchema = z.object({ mode: z.enum(['next', 'restart']).default('next') });
 
 export const runSeasonsSchema = z.object({ count: z.number().int().min(1).max(10).default(1) });
 export const playbackSchema = z.object({
@@ -230,6 +253,8 @@ export interface ParticipantView {
   /** Set while the server drafts for this team. */
   autoDraft: 'bot' | 'autopick' | null;
   rerollsLeft: number;
+  /** Club Spin re-spins left this draft (0 or 1). */
+  respinsLeft: number;
 }
 
 export interface PoolHealthView {
@@ -261,6 +286,8 @@ export interface GameView {
   pickDeadline: string | null;
   /** While paused: what was left on the pick clock. */
   pausedRemainingMs: number | null;
+  /** Rounds: 1 for a new game, then 2, 3, ... for each Play again. */
+  roundNumber: number;
   createdAt: string;
 }
 
@@ -296,6 +323,10 @@ export interface SpinView {
   clubId: number | null;
   /** Every club the wheel could have landed on (each has a legal player for this team). */
   candidates: number[];
+  /** A golden spin: the team may draft from any club. */
+  golden: boolean;
+  /** This team used its one re-spin on this pick. */
+  respun: boolean;
 }
 
 export interface DraftView {
@@ -339,6 +370,8 @@ export interface PlaybackState {
   playing: boolean;
   speed: PlaybackSpeed;
   anchorAt: string;
+  /** Last matchday played so far (19 while the mid-season window is open). Defaults to 38. */
+  cap?: number;
 }
 
 export interface SeasonListItem {
@@ -348,6 +381,8 @@ export interface SeasonListItem {
   championName: string | null;
   championIsHuman: boolean;
   createdAt: string;
+  /** Matchdays played so far: 19 until the mid-season window closes, then 38. */
+  matchdays: number;
 }
 
 export interface LineupSlotView {
@@ -363,6 +398,8 @@ export interface LineupSlotView {
   nationality: string | null;
   outOfPosition: boolean;
   reserve: boolean;
+  /** The team's captain (already includes the captain's boost in effectiveOverall). */
+  captain?: boolean;
 }
 
 export interface LeagueTeamView {
@@ -478,6 +515,88 @@ export interface MonteCarloView {
   homeWinRate: number;
 }
 
+export interface TradeView {
+  id: number;
+  fromParticipantId: number;
+  toParticipantId: number;
+  offerPlayerId: number;
+  requestPlayerId: number;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+  createdAt: string;
+}
+
+export interface RosterMoveView {
+  participantId: number;
+  slotKey: string;
+  outPlayerId: number;
+  inPlayerId: number;
+  kind: 'transfer' | 'trade';
+  windowKind: 'preseason' | 'mini' | 'big';
+  seasonNumber: number;
+}
+
+/**
+ * Where a game is in its round. preseason: draft done, season 1 not started. season: a half is
+ * being simulated. mini/big: a transfer window is open (mini after matchday 19, big after
+ * season 1). over: both seasons played.
+ */
+export type RoundPhase = 'preseason' | 'season' | 'mini' | 'big' | 'over';
+
+export interface RoundView {
+  seriesId: number;
+  roundNumber: number;
+  phase: RoundPhase | null;
+  /** The season the open window belongs to (or the season being played). */
+  seasonNumber: number;
+  /** Transfers per team in the open window (0 when no window is open). */
+  transferLimit: number;
+  transfersUsed: Record<number, number>;
+  /** Teams that marked themselves done in the open window. */
+  ready: number[];
+  /** Each team's current XI, by slot. */
+  rosters: Record<number, Record<string, number>>;
+  captains: Record<number, number | null>;
+  trades: TradeView[];
+  moves: RosterMoveView[];
+  /** Code of the next round's lobby once the host starts it. */
+  nextCode: string | null;
+}
+
+export interface SeriesLeaderboardView {
+  seriesId: number;
+  roundNumber: number;
+  rounds: {
+    roundNumber: number;
+    code: string;
+    complete: boolean;
+    winners: string[];
+  }[];
+  rows: {
+    key: string;
+    userId: number | null;
+    name: string;
+    teamName: string;
+    /** Rounds won: one point per round to the team with the most points over both seasons. */
+    points: number;
+    roundsPlayed: number;
+    /** League points over every completed season in the series. */
+    leaguePoints: number;
+    /** This round so far: league points over its completed seasons. */
+    currentRoundPoints: number;
+  }[];
+}
+
+export interface RivalView {
+  userId: number;
+  displayName: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+}
+
 export interface GameSnapshot {
   game: GameView;
   participants: ParticipantView[];
@@ -489,6 +608,7 @@ export interface GameSnapshot {
   draft: DraftView | null;
   seasons: SeasonListItem[];
   playback: PlaybackState | null;
+  round: RoundView | null;
   chat: ChatMessageView[];
   /** Pending start countdown, if any. */
   startsAt: string | null;
@@ -671,6 +791,8 @@ export interface ProfileView {
   bestGrade: string | null;
   trophies: TrophyView[];
   games: ProfileGameView[];
+  /** Head to head against other managers, across every game. */
+  rivals: RivalView[];
 }
 
 export interface HallOfFameEntry {

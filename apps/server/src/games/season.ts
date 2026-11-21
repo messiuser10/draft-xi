@@ -7,6 +7,7 @@ import { randomInt } from 'node:crypto';
 import {
   aiTeamId,
   buildLeagueTeams,
+  HALF_SEASON_MATCHDAYS,
   type HumanTeamInput,
   type LineupEntry,
   monteCarlo,
@@ -20,6 +21,7 @@ import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { actorOf, type AuthUser, requireUser } from '../auth/service';
 import { SYSTEM_ACTOR, writeAudit } from '../audit';
 import {
+  CAPTAIN_BOOST,
   type FixtureView,
   type KeyMomentView,
   type LeagueTeamView,
@@ -29,6 +31,7 @@ import {
   type PlaybackState,
   playbackMatchday,
   type playbackSchema,
+  ROUND_SEASONS,
   SEASON_MATCHDAYS,
   type SeasonListItem,
   type SeasonView,
@@ -40,6 +43,7 @@ import { badRequest, conflict, forbidden, notFound } from '../errors';
 import { getSetting } from '../settings/app-settings';
 import type { DraftService } from './draft';
 import { loadPool, type Pool } from './pool';
+import { loadRosters, type RosterEntry, type RoundService, type WindowState, windowOf } from './round';
 import type { GameHub } from './service';
 import { byPickOrder, formationOf, type GameRow, type ParticipantRow, settingsOf, toGameView } from './views';
 import type { z } from 'zod';
@@ -69,8 +73,9 @@ function chunks<T>(rows: readonly T[], size = CHUNK): T[][] {
   return out;
 }
 
-function toSlotView(e: LineupEntry): LineupSlotView {
+function toSlotView(e: LineupEntry, captainIds?: ReadonlySet<number>): LineupSlotView {
   return {
+    ...(captainIds?.has(e.player.id ?? -1) && !e.reserve ? { captain: true } : {}),
     slotKey: e.slotKey,
     slotType: e.slotType,
     x: e.x,
@@ -90,6 +95,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export class SeasonService {
   private readonly monteCarloCache = new Map<string, MonteCarloView>();
+  private rounds: RoundService | null = null;
 
   constructor(
     private readonly database: Database,
@@ -104,6 +110,10 @@ export class SeasonService {
 
   setHub(hub: GameHub): void {
     this.hub = hub;
+  }
+
+  setRounds(rounds: RoundService): void {
+    this.rounds = rounds;
   }
 
   // ---------- Starting seasons ----------
@@ -128,8 +138,11 @@ export class SeasonService {
     if (!claimed) throw conflict('not_ready', 'The season has already started');
     this.hub.emit(game.id, { type: 'game:updated', game: toGameView(claimed) });
     try {
-      const season = await this.simulateAndStore(claimed, 1, claimed.seed ?? randomInt(1, 2 ** 31), user);
-      await this.finishRun(claimed, 1);
+      await this.rounds?.cancelPendingTrades(game.id);
+      await this.rounds?.autoCaptains(game.id);
+      const season = await this.simulateAndStore(claimed, 1, claimed.seed ?? randomInt(1, 2 ** 31), user, null);
+      await this.finishRun(claimed, { seasonNumber: 1, matchday: 0, cap: HALF_SEASON_MATCHDAYS }, { phase: 'mini', seasonNumber: 1, ready: [] });
+      await this.rounds?.windowOpened(game.id);
       return season;
     } catch (err) {
       const [reverted] = await db.update(t.games).set({ status: 'draft_complete' }).where(eq(t.games.id, game.id)).returning();
@@ -138,67 +151,113 @@ export class SeasonService {
     }
   }
 
-  /** Run It Back (count 1) or Multi-season (2 to 10): same teams, new seeds, kept in history. */
-  async runMore(code: string, userIn: AuthUser | null, count: number): Promise<SeasonListItem[]> {
+  /** Seasons now come in rounds of two (with transfer windows); Play Again starts the next round. */
+  async runMore(code: string, userIn: AuthUser | null, _count: number): Promise<SeasonListItem[]> {
     const game = await this.getByCode(code);
-    const user = this.requireHost(game, userIn);
-    if (game.status !== 'completed') throw conflict('not_ready', 'Finish the first season before running more');
+    this.requireHost(game, userIn);
+    throw conflict('rounds', 'Each round has two seasons with transfer windows. Use Play again for a new round.');
+  }
+
+  /**
+   * Closes the open transfer window and plays on: after the mini window, the rest of that season
+   * (matchdays 20 to 38, replayed from the stored first half); after the big window, the first
+   * half of season 2. After season 2 the round is over.
+   */
+  async closeWindow(gameId: number, user: AuthUser | null): Promise<void> {
+    const game = await this.getById(gameId);
+    const w = windowOf(game);
+    if (game.status !== 'completed' || !w || w.phase === 'over') throw conflict('window_closed', 'No transfer window is open');
     const { db, t } = this.database;
     const [claimed] = await db
       .update(t.games)
       .set({ status: 'simulating' })
       .where(and(eq(t.games.id, game.id), eq(t.games.status, 'completed')))
       .returning();
-    if (!claimed) throw conflict('busy', 'A season is already being simulated');
+    if (!claimed) throw conflict('busy', 'The window is already closing');
     this.hub.emit(game.id, { type: 'game:updated', game: toGameView(claimed) });
-    const created: SeasonListItem[] = [];
     try {
-      const [last] = await db
-        .select({ n: t.seasons.seasonNumber })
-        .from(t.seasons)
-        .where(eq(t.seasons.gameId, game.id))
-        .orderBy(desc(t.seasons.seasonNumber))
-        .limit(1);
-      const start = (last?.n ?? 0) + 1;
-      for (let i = 0; i < count; i++) {
-        created.push(await this.simulateAndStore(claimed, start + i, randomInt(1, 2 ** 31), user));
+      await this.rounds?.cancelPendingTrades(game.id);
+      if (w.phase === 'mini') {
+        const [season] = await db
+          .select()
+          .from(t.seasons)
+          .where(and(eq(t.seasons.gameId, game.id), eq(t.seasons.seasonNumber, w.seasonNumber)))
+          .limit(1);
+        if (!season) throw notFound('That season has not been played');
+        await this.simulateAndStore(claimed, w.seasonNumber, season.seed, user, season);
+        const last = w.seasonNumber >= ROUND_SEASONS;
+        await this.finishRun(
+          claimed,
+          { seasonNumber: w.seasonNumber, matchday: HALF_SEASON_MATCHDAYS, cap: SEASON_MATCHDAYS },
+          last ? { phase: 'over', seasonNumber: w.seasonNumber, ready: [] } : { phase: 'big', seasonNumber: w.seasonNumber, ready: [] },
+        );
+        if (!last) await this.rounds?.windowOpened(game.id);
+      } else {
+        const next = w.seasonNumber + 1;
+        await this.simulateAndStore(claimed, next, randomInt(1, 2 ** 31), user, null);
+        await this.finishRun(claimed, { seasonNumber: next, matchday: 0, cap: HALF_SEASON_MATCHDAYS }, { phase: 'mini', seasonNumber: next, ready: [] });
+        await this.rounds?.windowOpened(game.id);
       }
-    } finally {
-      await this.finishRun(claimed, created.at(-1)?.number ?? null);
+    } catch (err) {
+      const [reverted] = await db.update(t.games).set({ status: 'completed' }).where(eq(t.games.id, game.id)).returning();
+      if (reverted) this.hub.emit(game.id, { type: 'game:updated', game: toGameView(reverted) });
+      throw err;
     }
-    return created;
   }
 
-  private async finishRun(game: GameRow, showSeason: number | null): Promise<void> {
+  private async finishRun(game: GameRow, show: { seasonNumber: number; matchday: number; cap: number }, windowState: WindowState): Promise<void> {
     const { db, t } = this.database;
     const prev = (game.playbackState as PlaybackState | null) ?? null;
-    const playback: PlaybackState | null =
-      showSeason === null
-        ? prev
-        : { seasonNumber: showSeason, matchday: 0, playing: true, speed: prev?.speed ?? 1, anchorAt: new Date().toISOString() };
+    const playback: PlaybackState = { ...show, playing: true, speed: prev?.speed ?? 1, anchorAt: new Date().toISOString() };
     const [done] = await db
       .update(t.games)
-      .set({ status: 'completed', playbackState: playback })
+      .set({ status: 'completed', playbackState: playback, windowState })
       .where(eq(t.games.id, game.id))
       .returning();
     if (done) this.hub.emit(game.id, { type: 'game:updated', game: toGameView(done) });
     this.hub.resync(game.id);
   }
 
-  private async simulateAndStore(game: GameRow, seasonNumber: number, seed: number, user: AuthUser | null): Promise<SeasonListItem> {
+  /**
+   * `firstHalf` null: plays matchdays 1 to 19 with the current squads and stores them (status
+   * simulating) with those squads, so the second half can replay them exactly. Otherwise it is
+   * that stored half: the whole season is replayed with squad changes from matchday 20 and
+   * replaces it.
+   */
+  private async simulateAndStore(
+    game: GameRow,
+    seasonNumber: number,
+    seed: number,
+    user: AuthUser | null,
+    firstHalf: Database['t']['seasons']['$inferSelect'] | null,
+  ): Promise<SeasonListItem> {
     const { db, t } = this.database;
     const parts = await db.select().from(t.participants).where(eq(t.participants.gameId, game.id));
-    const picks = await this.draft.picksOf(db, game.id);
+    const rosters = await loadRosters(this.database, game.id);
     const pool = await loadPool(this.database);
-    const params = resolveParams(await getSetting(this.database, 'simulation.parameters'));
-    const { inputs, meta } = await this.buildTeams(game, parts, picks, pool, params);
-    const result = simulateSeason(inputs, { seed, params });
+    const params = firstHalf
+      ? resolveParams(firstHalf.parametersSnapshot)
+      : resolveParams(await getSetting(this.database, 'simulation.parameters'));
+    const { inputs, meta, captains } = await this.buildTeams(game, parts, rosters, pool, params);
+    const stored = firstHalf ? ((firstHalf.inputsSnapshot as { inputs?: SeasonTeamInput[] } | null)?.inputs ?? null) : null;
+    const complete = firstHalf !== null;
+    const result = complete
+      ? simulateSeason(stored ?? inputs, { seed, params, changes: { fromMatchday: HALF_SEASON_MATCHDAYS + 1, teams: inputs } })
+      : simulateSeason(inputs, { seed, params, lastMatchday: HALF_SEASON_MATCHDAYS });
     const teamsById = new Map(result.teams.map((x) => [x.id, x]));
 
     const season = await this.database.transaction(async (tx) => {
+      if (firstHalf) await tx.delete(t.seasons).where(eq(t.seasons.id, firstHalf.id));
       const [row] = await tx
         .insert(t.seasons)
-        .values({ gameId: game.id, seasonNumber, seed: result.seed, status: 'completed', parametersSnapshot: { ...params } })
+        .values({
+          gameId: game.id,
+          seasonNumber,
+          seed: result.seed,
+          status: complete ? 'completed' : 'simulating',
+          parametersSnapshot: { ...params },
+          inputsSnapshot: complete ? null : { inputs },
+        })
         .returning();
       if (!row) throw new Error('Insert returned no season');
 
@@ -206,7 +265,7 @@ export class SeasonService {
       for (const input of inputs) {
         const m = meta.get(input.id)!;
         const rated = teamsById.get(input.id)!;
-        const lineup: StoredLineup = { slots: rated.lineup.map(toSlotView) };
+        const lineup: StoredLineup = { slots: rated.lineup.map((e) => toSlotView(e, captains)) };
         const [teamRow] = await tx
           .insert(t.seasonTeams)
           .values({
@@ -285,23 +344,24 @@ export class SeasonService {
       );
       for (const batch of chunks(stats)) await tx.insert(t.playerSeasonStats).values(batch);
 
-      const championId = tid(result.championTeamId);
-      await tx.update(t.seasons).set({ championSeasonTeamId: championId }).where(eq(t.seasons.id, row.id));
+      const championId = complete ? tid(result.championTeamId) : null;
+      if (championId !== null) await tx.update(t.seasons).set({ championSeasonTeamId: championId }).where(eq(t.seasons.id, row.id));
       await writeAudit(tx, t, {
         actor: user ? actorOf(user) : SYSTEM_ACTOR,
         action: 'season.simulate',
         target: `game:${game.joinCode}`,
         gameId: game.id,
-        details: { seasonNumber, seed: result.seed },
+        details: { seasonNumber, seed: result.seed, half: complete ? 'second' : 'first' },
       });
-      const champ = meta.get(result.championTeamId)!;
+      const champ = complete ? meta.get(result.championTeamId)! : null;
       return {
         number: seasonNumber,
         seed: result.seed,
         championTeamId: championId,
-        championName: champ.name,
-        championIsHuman: champ.kind === 'human',
+        championName: champ?.name ?? null,
+        championIsHuman: champ?.kind === 'human',
         createdAt: row.createdAt.toISOString(),
+        matchdays: complete ? SEASON_MATCHDAYS : HALF_SEASON_MATCHDAYS,
       } satisfies SeasonListItem;
     });
     return season;
@@ -311,10 +371,10 @@ export class SeasonService {
   private async buildTeams(
     game: GameRow,
     parts: readonly ParticipantRow[],
-    picks: readonly { participantId: number; playerId: number; slotKey: string }[],
+    picks: readonly RosterEntry[],
     pool: Pool,
     params: SimParams,
-  ): Promise<{ inputs: SeasonTeamInput[]; meta: Map<string, TeamMeta> }> {
+  ): Promise<{ inputs: SeasonTeamInput[]; meta: Map<string, TeamMeta>; captains: Set<number> }> {
     const settings = settingsOf(game);
     const formations = await getSetting(this.database, 'formations.enabled');
     const compatibility = await getSetting(this.database, 'positions.compatibility');
@@ -338,7 +398,7 @@ export class SeasonService {
       picks: picks.filter((k) => k.participantId === p.id).map((k) => ({ slotKey: k.slotKey, playerId: k.playerId })),
     }));
     const aiClubIds = game.aiClubIds ?? [];
-    const inputs = buildLeagueTeams({
+    const built = buildLeagueTeams({
       clubs: pool.engineClubs,
       players,
       humans,
@@ -351,6 +411,21 @@ export class SeasonService {
         reserveRating: params.reserveRating,
         strict: false,
       },
+    });
+    // The captain plays with a boost in every match.
+    const captainOf = new Map(ordered.map((p) => [`p${p.id}`, p.captainPlayerId]));
+    const captains = new Set<number>();
+    const inputs = built.map((team) => {
+      const captain = captainOf.get(team.id);
+      if (captain === undefined || captain === null) return team;
+      return {
+        ...team,
+        lineup: team.lineup.map((e) => {
+          if (e.reserve || e.player.id !== captain) return e;
+          captains.add(captain);
+          return { ...e, player: { ...e.player, overall: Math.min(99, e.player.overall + CAPTAIN_BOOST) }, effectiveOverall: Math.min(99, e.effectiveOverall + CAPTAIN_BOOST) };
+        }),
+      };
     });
     const meta = new Map<string, TeamMeta>();
     for (const p of ordered) {
@@ -376,7 +451,7 @@ export class SeasonService {
         monogram: club?.shortName ?? 'AI',
       });
     }
-    return { inputs, meta };
+    return { inputs, meta, captains };
   }
 
   /** The 20 season inputs for a game as it stands (Simulation Lab). */
@@ -385,7 +460,7 @@ export class SeasonService {
     if (game.strengthSnapshot === null) throw conflict('not_started', 'That game has not started its draft');
     const { db, t } = this.database;
     const parts = await db.select().from(t.participants).where(eq(t.participants.gameId, game.id));
-    const picks = await this.draft.picksOf(db, game.id);
+    const picks = await loadRosters(this.database, game.id);
     const pool = await loadPool(this.database);
     const params = resolveParams(await getSetting(this.database, 'simulation.parameters'));
     const { inputs, meta } = await this.buildTeams(game, parts, picks, pool, params);
@@ -414,6 +489,7 @@ export class SeasonService {
       championName: champ?.name ?? null,
       championIsHuman: champ?.kind === 'human',
       createdAt: s.createdAt.toISOString(),
+      matchdays: s.status === 'completed' ? SEASON_MATCHDAYS : HALF_SEASON_MATCHDAYS,
     }));
   }
 
@@ -526,9 +602,9 @@ export class SeasonService {
       return { source: 'season', teams: this.rankTeams(rows.map((r) => this.teamView(r, pool))) };
     }
     const parts = await db.select().from(t.participants).where(eq(t.participants.gameId, game.id));
-    const picks = await this.draft.picksOf(db, game.id);
+    const picks = await loadRosters(this.database, game.id);
     const params = resolveParams(await getSetting(this.database, 'simulation.parameters'));
-    const { inputs, meta } = await this.buildTeams(game, parts, picks, pool, params);
+    const { inputs, meta, captains } = await this.buildTeams(game, parts, picks, pool, params);
     const rated = rateTeams(inputs, params);
     const teams = rated.map((r): LeagueTeamView => {
       const m = meta.get(r.id)!;
@@ -542,7 +618,7 @@ export class SeasonService {
         overall: r.rating.overall,
         strength: r.rating.strength,
         rank: 0,
-        lineup: r.lineup.map(toSlotView),
+        lineup: r.lineup.map((e) => toSlotView(e, captains)),
       };
     });
     return { source: 'draft', teams: this.rankTeams(teams) };
@@ -578,12 +654,13 @@ export class SeasonService {
     if (game.status !== 'draft_complete' && game.status !== 'completed' && game.status !== 'simulating') {
       throw conflict('not_ready', 'Expected Strength is available once the draft is complete');
     }
-    const key = `${game.id}:${runs}`;
+    const { db, t } = this.database;
+    const picks = await loadRosters(this.database, game.id);
+    const parts = await db.select().from(t.participants).where(eq(t.participants.gameId, game.id));
+    // Transfers, trades and captains change the teams, so they are part of the cache key.
+    const key = `${game.id}:${runs}:${picks.map((p) => p.playerId).join(',')}:${parts.map((p) => p.captainPlayerId ?? 0).join(',')}`;
     const cached = this.monteCarloCache.get(key);
     if (cached) return cached;
-    const { db, t } = this.database;
-    const parts = await db.select().from(t.participants).where(eq(t.participants.gameId, game.id));
-    const picks = await this.draft.picksOf(db, game.id);
     const pool = await loadPool(this.database);
     const params = resolveParams(await getSetting(this.database, 'simulation.parameters'));
     const { inputs, meta } = await this.buildTeams(game, parts, picks, pool, params);
@@ -618,14 +695,16 @@ export class SeasonService {
     const prev = (game.playbackState as PlaybackState | null) ?? { seasonNumber: 1, matchday: 0, playing: false, speed: 1, anchorAt: new Date(now).toISOString() };
     const current = playbackMatchday(prev, now);
     let next: PlaybackState = { ...prev, matchday: current, anchorAt: new Date(now).toISOString() };
+    const seasons = await this.list(game.id);
     if (input.seasonNumber !== undefined && input.seasonNumber !== prev.seasonNumber) {
-      const seasons = await this.list(game.id);
       if (!seasons.some((s) => s.number === input.seasonNumber)) throw badRequest('no_season', 'That season has not been played');
       next = { ...next, seasonNumber: input.seasonNumber, matchday: 0 };
     }
+    const cap = seasons.find((s) => s.number === next.seasonNumber)?.matchdays ?? SEASON_MATCHDAYS;
+    next = { ...next, cap, matchday: Math.min(cap, next.matchday) };
     switch (input.action) {
       case 'play':
-        next = { ...next, playing: true, matchday: next.matchday >= SEASON_MATCHDAYS ? 0 : next.matchday };
+        next = { ...next, playing: true, matchday: next.matchday >= cap ? 0 : next.matchday };
         break;
       case 'pause':
         next = { ...next, playing: false };
@@ -636,10 +715,10 @@ export class SeasonService {
         break;
       case 'jump':
         if (input.matchday === undefined) throw badRequest('matchday', 'Choose a matchday');
-        next = { ...next, matchday: input.matchday };
+        next = { ...next, matchday: Math.min(cap, input.matchday) };
         break;
       case 'end':
-        next = { ...next, matchday: SEASON_MATCHDAYS, playing: false };
+        next = { ...next, matchday: cap, playing: false };
         break;
     }
     const { db, t } = this.database;

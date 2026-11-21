@@ -572,12 +572,17 @@ export class AdminService {
     const settings = game.settings as { pickTimerSeconds: number | null };
     await this.database.transaction(async (tx) => {
       const parts = await tx.select().from(t.participants).where(and(eq(t.participants.gameId, game.id), isNotNull(t.participants.teamName))).orderBy(asc(t.participants.pickOrder));
+      await tx.delete(t.rosterMoves).where(eq(t.rosterMoves.gameId, game.id));
+      await tx.delete(t.trades).where(eq(t.trades.gameId, game.id));
       await tx.delete(t.draftPicks).where(eq(t.draftPicks.gameId, game.id));
-      for (const p of parts) await tx.update(t.participants).set({ rerollsUsed: 0, autoDraft: null }).where(eq(t.participants.id, p.id));
+      for (const p of parts) {
+        await tx.update(t.participants).set({ rerollsUsed: 0, autoDraft: null, respinPick: null, captainPlayerId: null }).where(eq(t.participants.id, p.id));
+      }
       await tx
         .update(t.games)
         .set({
           status: 'drafting',
+          windowState: null,
           currentPickNumber: 1,
           currentParticipantId: parts[0]?.id ?? null,
           pausedRemainingMs: null,
@@ -591,14 +596,19 @@ export class AdminService {
     this.hub.resync(game.id);
   }
 
-  /** Re-run Simulation: deletes every season and simulates season 1 again from the game seed. */
+  /**
+   * Re-run Simulation: deletes every season and starts the round again from the draft (transfers
+   * and trades are undone), simulating the first half of season 1 from the game seed.
+   */
   async rerun(actorIn: AuthUser | null, code: string): Promise<void> {
     const actor = requireAdmin(actorIn);
     const game = await this.games.getByCode(code);
     if (game.status !== 'completed') throw conflict('bad_status', 'Only a completed game can be re-simulated');
     const { db, t } = this.database;
     await db.delete(t.seasons).where(eq(t.seasons.gameId, game.id));
-    const [row] = await db.update(t.games).set({ status: 'draft_complete', playbackState: null }).where(eq(t.games.id, game.id)).returning();
+    await db.delete(t.rosterMoves).where(eq(t.rosterMoves.gameId, game.id));
+    await db.delete(t.trades).where(eq(t.trades.gameId, game.id));
+    const [row] = await db.update(t.games).set({ status: 'draft_complete', playbackState: null, windowState: null }).where(eq(t.games.id, game.id)).returning();
     if (row) this.hub.emit(game.id, { type: 'game:updated', game: toGameView(row) });
     this.seasons.forget(game.id);
     await this.audit(actor, 'admin.game.rerun', `game:${game.joinCode}`, { seed: game.seed }, game.id);

@@ -17,7 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { Chat } from '../components/Chat';
-import { ClubSpin, useSpin } from '../components/ClubSpin';
+import { ClubSpin, spinKey, useSpin } from '../components/ClubSpin';
 import { ErrorCard } from '../components/ErrorBoundary';
 import { CountdownRing } from '../components/CountdownRing';
 import { Kickoff } from '../components/Kickoff';
@@ -144,11 +144,12 @@ function DraftRoom({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData 
 
   // Club Spin: the pool narrows to the spun club once the reel has landed for this pick.
   const spinOn = settings.clubSpin && settings.draftMode !== 'pack' && game.status !== 'draft_complete';
-  const spinQuery = useSpin(code, game.currentPickNumber, spinOn);
+  const onClockRespins = participants.find((p) => p.id === game.currentParticipantId)?.respinsLeft ?? 0;
+  const spinQuery = useSpin(code, game.currentPickNumber, spinOn, onClockRespins);
   const spin = spinQuery.data?.pickNumber === game.currentPickNumber ? spinQuery.data : null;
-  const [landedPick, setLandedPick] = useState<number | null>(null);
-  const onLanded = useCallback((n: number) => setLandedPick(n), []);
-  const spinLanded = !spinOn || (spin !== null && landedPick === game.currentPickNumber);
+  const [landedKey, setLandedKey] = useState<string | null>(null);
+  const onLanded = useCallback((k: string) => setLandedKey(k), []);
+  const spinLanded = !spinOn || (spin !== null && landedKey === spinKey(spin));
   const spunClub = spinOn && spinLanded ? (spin?.clubId ?? null) : null;
   const canPick = myTurn && spinLanded;
   const fromSpunClub = (playerId: number) => spunClub === null || pool.playersById.get(playerId)?.clubId === spunClub;
@@ -190,7 +191,17 @@ function DraftRoom({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData 
       <TopBar snapshot={snapshot} onClock={onClock} round={round} myTurn={myTurn} />
       <PickOrderStrip snapshot={snapshot} round={round} />
       {spinOn && spin && onClock && !showKickoff ? (
-        <ClubSpin key={spin.pickNumber} spin={spin} pool={pool} teamName={onClock.team.teamName ?? 'This team'} myTurn={myTurn} onLanded={onLanded} />
+        <ClubSpin
+          key={spinKey(spin)}
+          spin={spin}
+          pool={pool}
+          teamName={onClock.team.teamName ?? 'This team'}
+          myTurn={myTurn}
+          respinsLeft={onClockRespins}
+          respinBusy={busy}
+          onRespin={() => void run(`/api/games/${code}/spin/respin`)}
+          onLanded={onLanded}
+        />
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">

@@ -2,12 +2,11 @@
 import type { AwardPlayerView, LeagueTeamView, ResultsView } from '@draft-xi/server/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { ClubShield } from '../components/Kickoff';
 import { Pitch } from '../components/Pitch';
 import { TeamBadge } from '../components/TeamBadge';
 import { DISCLAIMER } from '../components/Layout';
-import { useAction } from '../lib/actions';
 import { api } from '../lib/api';
 import { usePool } from '../lib/pool';
 import { BAND_BORDER, bandFor, DEFAULT_BANDS, useSite } from '../lib/session';
@@ -347,8 +346,6 @@ function Picks({ results, teams }: { results: ResultsView; teams: Map<string, Le
 
 function Share({ results, teams, isHost, code }: { results: ResultsView; teams: Map<string, LeagueTeamView>; isHost: boolean; code: string }) {
   const push = useToasts((s) => s.push);
-  const { run, busy } = useAction();
-  const navigate = useNavigate();
   const rematchCode = useRematch((s) => s[code]);
   const copy = async () => {
     try {
@@ -357,10 +354,6 @@ function Share({ results, teams, isHost, code }: { results: ResultsView; teams: 
     } catch {
       push('Copy failed: your browser blocked the clipboard');
     }
-  };
-  const rematch = async () => {
-    const res = await run<{ game: { code: string } }>(`/api/games/${code}/rematch`);
-    if (res) void navigate(`/lobby/${res.game.code}`);
   };
   return (
     <section className="card flex flex-wrap items-center gap-2 p-4">
@@ -372,9 +365,6 @@ function Share({ results, teams, isHost, code }: { results: ResultsView; teams: 
       </button>
       {isHost ? (
         <>
-          <button type="button" className="btn-primary" disabled={busy} onClick={() => void rematch()}>
-            Rematch
-          </button>
           <a className="btn-ghost" href={`/api/games/${code}/export?format=json`} download>
             Export JSON
           </a>
@@ -383,9 +373,12 @@ function Share({ results, teams, isHost, code }: { results: ResultsView; teams: 
           </a>
         </>
       ) : null}
+      <Link to={`/season/${code}`} className="btn-ghost">
+        Back to the season
+      </Link>
       {rematchCode ? (
         <Link to={`/lobby/${rematchCode}`} className="btn-primary ml-auto">
-          Join the rematch
+          Join the next round
         </Link>
       ) : null}
     </section>

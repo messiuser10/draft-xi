@@ -161,7 +161,7 @@ export const useGames = create<GamesState>((set) => ({
           break;
         case 'game:rematch':
           useRematch.setState((r) => ({ ...r, [code]: event.code }));
-          useToasts.getState().push(`Rematch lobby ${event.code} is open`);
+          useToasts.getState().push(`The next round's lobby ${event.code} is open`);
           break;
       }
       return { byCode: { ...s.byCode, [code]: next } };

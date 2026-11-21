@@ -5,11 +5,12 @@ import type {
   ProfileView,
   RecordBookView,
   ResultsView,
+  SeriesLeaderboardView,
   TeamPageView,
 } from '@draft-xi/server/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DIALECTS } from './helpers/db';
-import { type Client, registeredClient, startTestServer, team, type TestServer, waitFor } from './helpers/server';
+import { type Client, playRound, registeredClient, startTestServer, team, type TestServer, waitFor } from './helpers/server';
 
 type Created = { game: { code: string; id: number } };
 
@@ -32,7 +33,7 @@ describe.each(DIALECTS)('results and history on %s', (_name, open) => {
     await waitFor(async () => (await snap(host, code)).game.status === 'drafting');
     await host.post(`/api/games/${code}/draft/end`);
     await waitFor(async () => (await snap(host, code)).game.status === 'draft_complete', 10_000);
-    expect((await host.post(`/api/games/${code}/season`)).status).toBe(201);
+    await playRound(host, code);
   });
   afterAll(async () => server.close());
 
@@ -76,20 +77,27 @@ describe.each(DIALECTS)('results and history on %s', (_name, open) => {
     expect((await rival.get(`/api/games/${code}/export?format=json`)).status).toBe(403);
     const json = await host.get<{ seasons: unknown[] }>(`/api/games/${code}/export?format=json`);
     expect(json.status).toBe(200);
-    expect(json.body.seasons).toHaveLength(1);
+    expect(json.body.seasons).toHaveLength(2);
     const csv = await server.app.inject({ method: 'GET', url: `/api/games/${code}/export?format=csv`, headers: { cookie: host.cookie } });
     expect(csv.statusCode).toBe(200);
     expect(csv.headers['content-type']).toContain('text/csv');
-    expect(csv.body.trim().split('\n')).toHaveLength(21);
+    expect(csv.body.trim().split('\n')).toHaveLength(41);
   });
 
   it('builds profiles, Hall of Fame, leaderboard and record book', async () => {
     const me = (await host.get<ProfileView>('/api/profile')).body;
     expect(me.gamesPlayed).toBe(1);
-    expect(me.seasonsPlayed).toBe(1);
+    expect(me.seasonsPlayed).toBe(2);
     expect(me.avgFinish).toBeGreaterThanOrEqual(1);
     expect(me.bestGrade).not.toBeNull();
-    expect(me.games[0]?.finish).toBe(me.avgFinish);
+    expect(me.games[0]?.finish).toBeGreaterThanOrEqual(1);
+    // Rivalries: host and rival met twice a season, over two seasons.
+    expect(me.rivals).toHaveLength(1);
+    expect(me.rivals[0]!.played).toBe(4);
+    expect(me.rivals[0]!.won + me.rivals[0]!.drawn + me.rivals[0]!.lost).toBe(4);
+    const theirs = (await rival.get<ProfileView>('/api/profile')).body.rivals[0]!;
+    expect(theirs.won).toBe(me.rivals[0]!.lost);
+    expect(theirs.userId).not.toBe(me.rivals[0]!.userId);
     const fame = (await host.get<{ entries: HallOfFameEntry[] }>('/api/hall-of-fame')).body.entries;
     expect(fame).toHaveLength(1);
     expect(fame[0]!.gameCode).toBe(code);
@@ -101,12 +109,44 @@ describe.each(DIALECTS)('results and history on %s', (_name, open) => {
     expect(records.bestGoalDifference?.value).toBeGreaterThan(0);
   });
 
-  it('rematch makes a new lobby with the same teams', async () => {
+  it('awards one game leaderboard point for the round, and Play again keeps the series', async () => {
+    const board = (await host.get<SeriesLeaderboardView>(`/api/games/${code}/leaderboard`)).body;
+    expect(board.rounds).toEqual([expect.objectContaining({ roundNumber: 1, complete: true })]);
+    expect(board.rows).toHaveLength(3);
+    expect(board.rows.reduce((n, r) => n + r.points, 0)).toBeGreaterThanOrEqual(1);
+    expect(board.rows[0]!.points).toBe(1);
+    expect(board.rows[0]!.leaguePoints).toBe(Math.max(...board.rows.map((r) => r.leaguePoints)));
+
     expect((await rival.post(`/api/games/${code}/rematch`)).status).toBe(403);
-    const res = await host.post<Created>(`/api/games/${code}/rematch`);
+    const res = await host.post<Created>(`/api/games/${code}/rematch`, { mode: 'next' });
     expect(res.status, JSON.stringify(res.body)).toBe(201);
+    // Asking again returns the same next round.
+    expect((await host.post<Created>(`/api/games/${code}/rematch`, { mode: 'next' })).body.game.code).toBe(res.body.game.code);
     const fresh = await snap(host, res.body.game.code);
     expect(fresh.game.status).toBe('lobby');
     expect(fresh.participants.map((p) => p.teamName).sort()).toEqual((await snap(host, code)).participants.map((p) => p.teamName).sort());
+    expect((await snap(host, code)).round?.nextCode).toBe(res.body.game.code);
+    const nextBoard = (await host.get<SeriesLeaderboardView>(`/api/games/${res.body.game.code}/leaderboard`)).body;
+    expect(nextBoard.roundNumber).toBe(2);
+    expect(nextBoard.seriesId).toBe(board.seriesId);
+    expect(nextBoard.rows.reduce((n, r) => n + r.points, 0)).toBe(board.rows.reduce((n, r) => n + r.points, 0));
+  });
+
+  it('Restart starts a new series with an empty leaderboard', async () => {
+    const second = await host.post<Created>('/api/games', { name: 'Restart Test', settings: { pickTimerSeconds: null }, team: team('Restart FC') });
+    const c = second.body.game.code;
+    await host.post(`/api/games/${c}/bots`, { level: 'easy' });
+    await host.post(`/api/games/${c}/start`, { force: true });
+    await waitFor(async () => (await snap(host, c)).game.status === 'drafting');
+    await host.post(`/api/games/${c}/draft/end`);
+    await waitFor(async () => (await snap(host, c)).game.status === 'draft_complete', 10_000);
+    expect((await host.post(`/api/games/${c}/rematch`, { mode: 'restart' })).status).toBe(409);
+    await playRound(host, c);
+    const res = await host.post<Created>(`/api/games/${c}/rematch`, { mode: 'restart' });
+    expect(res.status).toBe(201);
+    const board = (await host.get<SeriesLeaderboardView>(`/api/games/${res.body.game.code}/leaderboard`)).body;
+    expect(board.roundNumber).toBe(1);
+    expect(board.rounds).toHaveLength(1);
+    expect(board.rows.every((r) => r.points === 0)).toBe(true);
   });
 });

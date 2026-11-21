@@ -59,7 +59,10 @@ function Lobby({ snapshot }: { snapshot: GameSnapshot }) {
       <StartCountdown startsAt={snapshot.startsAt} />
       <header className="flex flex-wrap items-end gap-3">
         <div>
-          <p className="display text-pitch-500">Lobby · {game.settings.draftMode} draft</p>
+          <p className="display text-pitch-500">
+            Lobby · {game.roundNumber > 1 ? `round ${game.roundNumber} · ` : ''}
+            {game.settings.draftMode} draft
+          </p>
           <h1 className="display text-4xl">{game.name}</h1>
         </div>
         <span className="ml-auto rounded-full bg-slate-200 px-3 py-1 text-sm dark:bg-night-700">
