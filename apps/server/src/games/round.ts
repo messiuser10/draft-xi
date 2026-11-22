@@ -1,16 +1,20 @@
 /**
  * Rounds: two seasons per round, a mini transfer window after matchday 19 of each season and a
- * big one between the seasons. Also captains, transfers, trades between teams and the series
+ * big one between the seasons. Also captains, transfers (bought with a window budget), trades
+ * between teams and the series
  * leaderboard (one point per round to the team with the most league points over both seasons).
  *
  * A team's current XI is its draft picks with `roster_moves` applied in order, so the draft
  * itself (and its grades) never changes.
  */
-import { getFormation, type SlotCompatibility } from '@draft-xi/engine';
+import { getFormation, HALF_SEASON_MATCHDAYS, type SlotCompatibility } from '@draft-xi/engine';
 import { and, asc, eq, inArray, or } from 'drizzle-orm';
 import { actorOf, type AuthUser, requireUser } from '../auth/service';
 import { SYSTEM_ACTOR, writeAudit } from '../audit';
 import {
+  MATCHDAY_MS,
+  type PlaybackState,
+  playerValue,
   ROUND_SEASONS,
   type RoundPhase,
   type RoundView,
@@ -18,6 +22,8 @@ import {
   type SeriesLeaderboardView,
   TRANSFER_LIMITS,
   type TradeView,
+  WINDOW_SECONDS,
+  windowBudget,
 } from '../contracts';
 import type { AppDb, Database } from '../db/database';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../errors';
@@ -42,6 +48,28 @@ export interface WindowState {
   seasonNumber: number;
   ready: number[];
   nextCode?: string | null;
+  /** Budget each team got for this window, by participant id (JSON keys are strings). */
+  grants?: Record<string, number>;
+  /** When the window closes by itself. */
+  closesAt?: string;
+}
+
+type WindowMove = Pick<MoveRow, 'participantId' | 'outPlayerId' | 'inPlayerId' | 'kind' | 'windowKind' | 'seasonNumber'>;
+
+/** Money a team has left in a window: its grant, plus what it sold, minus what it bought. */
+export function budgetLeftOf(
+  w: WindowState,
+  phase: 'mini' | 'big',
+  participantId: number,
+  moves: readonly WindowMove[],
+  overallOf: (playerId: number) => number,
+): number {
+  let left = w.grants?.[String(participantId)] ?? 0;
+  for (const m of moves) {
+    if (m.participantId !== participantId || m.kind !== 'transfer' || m.windowKind !== phase || m.seasonNumber !== w.seasonNumber) continue;
+    left += playerValue(overallOf(m.outPlayerId)) - playerValue(overallOf(m.inPlayerId));
+  }
+  return left;
 }
 
 export function windowOf(game: GameRow): WindowState | null {
@@ -86,6 +114,7 @@ export interface WindowCloser {
 
 export class RoundService {
   private closer: WindowCloser | null = null;
+  private readonly windowTimers = new Map<number, NodeJS.Timeout>();
 
   constructor(
     private readonly database: Database,
@@ -98,6 +127,45 @@ export class RoundService {
 
   setCloser(closer: WindowCloser): void {
     this.closer = closer;
+  }
+
+  dispose(): void {
+    for (const timer of this.windowTimers.values()) clearTimeout(timer);
+    this.windowTimers.clear();
+  }
+
+  /** On boot: re-arm the timer of every open transfer window from its stored closing time. */
+  async restore(): Promise<number> {
+    const { db, t } = this.database;
+    const games = await db.select().from(t.games).where(eq(t.games.status, 'completed'));
+    let n = 0;
+    for (const g of games) {
+      const w = windowOf(g);
+      if (w?.closesAt && (w.phase === 'mini' || w.phase === 'big')) {
+        this.scheduleClose(g.id, w.closesAt);
+        n++;
+      }
+    }
+    return n;
+  }
+
+  private scheduleClose(gameId: number, closesAt: string): void {
+    const existing = this.windowTimers.get(gameId);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      this.windowTimers.delete(gameId);
+      void this.closeOnTime(gameId, closesAt).catch(() => undefined);
+    }, Math.max(0, Date.parse(closesAt) - Date.now()));
+    timer.unref?.();
+    this.windowTimers.set(gameId, timer);
+  }
+
+  /** The timer fired: close the window, unless it already closed (or a later one is open). */
+  private async closeOnTime(gameId: number, closesAt: string): Promise<void> {
+    const game = await this.getById(gameId);
+    const phase = phaseOf(game);
+    if ((phase !== 'mini' && phase !== 'big') || windowOf(game)?.closesAt !== closesAt) return;
+    await this.closer!.closeWindow(gameId, null);
   }
 
   // ---------- Reads ----------
@@ -114,10 +182,19 @@ export class RoundService {
     const open = phase === 'mini' || phase === 'big';
     const seasonNumber = w?.seasonNumber ?? 1;
     const used: Record<number, number> = {};
+    const grants: Record<number, number> = {};
+    const left: Record<number, number> = {};
     for (const p of parts) used[p.id] = 0;
-    if (open) {
+    if (open && w) {
       for (const m of moves) {
         if (m.kind === 'transfer' && m.windowKind === phase && m.seasonNumber === seasonNumber) used[m.participantId] = (used[m.participantId] ?? 0) + 1;
+      }
+      const pool = await loadPool(this.database);
+      const overallOf = (id: number) => pool.players.find((p) => p.id === id)?.overall ?? 0;
+      for (const p of parts) {
+        if (p.teamName === null) continue;
+        grants[p.id] = w.grants?.[String(p.id)] ?? 0;
+        left[p.id] = budgetLeftOf(w, phase, p.id, moves, overallOf);
       }
     }
     const byTeam: Record<number, Record<string, number>> = {};
@@ -129,6 +206,9 @@ export class RoundService {
       seasonNumber,
       transferLimit: open ? TRANSFER_LIMITS[phase] : 0,
       transfersUsed: used,
+      budgetGrants: grants,
+      budgetLeft: left,
+      closesAt: open ? (w?.closesAt ?? null) : null,
       ready: open ? (w?.ready ?? []) : [],
       rosters: byTeam,
       captains: Object.fromEntries(parts.filter((p) => p.teamName !== null).map((p) => [p.id, p.captainPlayerId])),
@@ -177,7 +257,10 @@ export class RoundService {
 
   // ---------- Transfers ----------
 
-  /** Swap one of your players for a free player (on no drafted team) who fits the same slot. */
+  /**
+   * Sell the player in one of your slots and buy a free player (on no drafted team) who fits it.
+   * The price difference comes out of (or goes into) your window budget.
+   */
   async transfer(code: string, userIn: AuthUser | null, slotKey: string, playerId: number): Promise<void> {
     const { game, me } = await this.mine(code, userIn);
     const phase = phaseOf(game);
@@ -196,7 +279,7 @@ export class RoundService {
       const { t } = this.database;
       const moves = await tx.select().from(t.rosterMoves).where(eq(t.rosterMoves.gameId, game.id));
       const used = moves.filter((m) => m.participantId === me.id && m.kind === 'transfer' && m.windowKind === phase && m.seasonNumber === w.seasonNumber).length;
-      if (used >= TRANSFER_LIMITS[phase]) throw conflict('no_transfers', `You have used your ${TRANSFER_LIMITS[phase] === 1 ? 'transfer' : `${TRANSFER_LIMITS[phase]} transfers`} in this window`);
+      if (used >= TRANSFER_LIMITS[phase]) throw conflict('no_transfers', `You have used all ${TRANSFER_LIMITS[phase]} transfers in this window`);
       const rosters = await loadRosters(this.database, game.id, tx);
       const current = rosters.find((r) => r.participantId === me.id && r.slotKey === slotKey);
       if (!current) throw badRequest('wrong_slot', 'You have no player in that slot');
@@ -209,6 +292,10 @@ export class RoundService {
         const sameClub = rosters.filter((r) => r.participantId === me.id && r.slotKey !== slotKey && pool.players.find((x) => x.id === r.playerId)?.clubId === player.clubId).length;
         if (sameClub >= settings.clubCap) throw badRequest('club_cap', `You can take at most ${settings.clubCap} players from one club`);
       }
+      const overallOf = (id: number) => pool.players.find((p) => p.id === id)?.overall ?? 0;
+      const left = budgetLeftOf(w, phase, me.id, moves, overallOf);
+      const cost = playerValue(player.overall) - playerValue(overallOf(current.playerId));
+      if (cost > left) throw conflict('budget', `${player.name} costs ${cost}M more than the player you sell, and you have ${left}M left`);
       await tx.insert(t.rosterMoves).values({
         gameId: game.id,
         participantId: me.id,
@@ -432,7 +519,11 @@ export class RoundService {
     if (humans.every((p) => w.ready.includes(p.id))) await this.closer!.closeWindow(gameId, null);
   }
 
-  /** A window just opened: bots are done at once (they shop when it closes, after the humans). */
+  /**
+   * A window just opened. Every team gets its budget from the league points it has so far; bots
+   * are done at once (they shop when it closes, after the humans). The window closes by itself
+   * WINDOW_SECONDS after the playback reaches it.
+   */
   async windowOpened(gameId: number): Promise<void> {
     const game = await this.getById(gameId);
     const phase = phaseOf(game);
@@ -442,8 +533,28 @@ export class RoundService {
     const parts = await db.select().from(t.participants).where(eq(t.participants.gameId, gameId));
     const bots = parts.filter((p) => p.isBot && p.teamName !== null);
     const ready = [...new Set([...w.ready, ...bots.map((b) => b.id)])];
-    await db.update(t.games).set({ windowState: { ...w, ready } }).where(eq(t.games.id, gameId));
+    const points = await this.pointsSoFar(gameId, w.seasonNumber, phase === 'mini' ? HALF_SEASON_MATCHDAYS : SEASON_MATCHDAYS);
+    const grants: Record<string, number> = {};
+    for (const p of parts) if (p.teamName !== null) grants[String(p.id)] = windowBudget(phase, points.get(p.id) ?? 0);
+    const playback = game.playbackState as PlaybackState | null;
+    const toGo = playback ? Math.max(0, (playback.cap ?? SEASON_MATCHDAYS) - playback.matchday) : 0;
+    const playMs = playback?.playing ? (toGo * MATCHDAY_MS) / Math.max(playback.speed, 0.25) : 0;
+    const closesAt = new Date(Date.now() + playMs + WINDOW_SECONDS * 1000).toISOString();
+    await db.update(t.games).set({ windowState: { ...w, ready, grants, closesAt } }).where(eq(t.games.id, gameId));
+    this.scheduleClose(gameId, closesAt);
     this.hub.resync(gameId);
+  }
+
+  /** League points of each drafted team at a matchday of a season, by participant id. */
+  private async pointsSoFar(gameId: number, seasonNumber: number, matchday: number): Promise<Map<number, number>> {
+    const { db, t } = this.database;
+    const rows = await db
+      .select({ participantId: t.seasonTeams.participantId, points: t.standingRows.points })
+      .from(t.standingRows)
+      .innerJoin(t.seasonTeams, eq(t.standingRows.seasonTeamId, t.seasonTeams.id))
+      .innerJoin(t.seasons, eq(t.standingRows.seasonId, t.seasons.id))
+      .where(and(eq(t.seasons.gameId, gameId), eq(t.seasons.seasonNumber, seasonNumber), eq(t.standingRows.matchday, matchday)));
+    return new Map(rows.flatMap((r) => (r.participantId === null ? [] : [[r.participantId, r.points] as const])));
   }
 
   /**
@@ -460,24 +571,29 @@ export class RoundService {
     const pool = await loadPool(this.database);
     const compatibility = await this.compatibility();
     const strict = settingsOf(game).strictPositions;
+    const w = windowOf(game);
+    if (!w) return;
     const ovr = (id: number) => pool.players.find((p) => p.id === id)?.overall ?? 0;
     // Take turns, one transfer per bot per pass, so the first bot does not get every star.
     for (let n = 0; n < TRANSFER_LIMITS[phase]; n++) {
       for (const bot of bots) {
         const rosters = await loadRosters(this.database, gameId);
+        const moves = await db.select().from(t.rosterMoves).where(eq(t.rosterMoves.gameId, gameId));
+        const left = budgetLeftOf(w, phase, bot.id, moves, ovr);
         const taken = new Set(rosters.map((r) => r.playerId));
         const mine = rosters.filter((r) => r.participantId === bot.id).sort((a, b) => ovr(a.playerId) - ovr(b.playerId));
         for (const r of mine) {
           const slot = this.slotOf(bot, r.slotKey);
+          const budget = left + playerValue(ovr(r.playerId));
           const best = pool.players
-            .filter((p) => !taken.has(p.id) && p.overall > ovr(r.playerId) && slotAccepts(p, slot, compatibility, strict))
+            .filter((p) => !taken.has(p.id) && p.overall > ovr(r.playerId) && playerValue(p.overall) <= budget && slotAccepts(p, slot, compatibility, strict))
             .sort((a, b) => b.overall - a.overall)[0];
           if (!best) continue;
           try {
             await this.applyTransfer(game, bot, r.slotKey, best.id, phase);
             break;
           } catch {
-            /* club cap or no transfers left: try the next slot */
+            /* club cap, budget or no transfers left: try the next slot */
           }
         }
       }

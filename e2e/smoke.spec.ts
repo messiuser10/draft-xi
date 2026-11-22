@@ -33,12 +33,15 @@ test('create a game, bot-draft it and play a round', async ({ page }) => {
   await page.getByRole('button', { name: 'Start Season' }).click();
 
   await expect(page).toHaveURL(/\/season\//, { timeout: 60_000 });
-  // First half, then the mid-season window: make one transfer and say done.
+  // First half, then the mid-season window: make a transfer and say done.
   await page.getByRole('button', { name: 'Skip to mid-season' }).click();
   await expect(page.getByRole('heading', { name: /Mid-season transfer window/ })).toBeVisible();
   await page.getByRole('button', { name: 'Replace', exact: true }).first().click();
+  await expect(page.getByRole('timer')).toBeVisible();
+  await expect(page.getByText('to spend', { exact: false })).toBeVisible();
+  // Affordable players are listed first.
   await page.getByRole('button', { name: 'Sign', exact: true }).first().click();
-  await expect(page.getByText('0 of 1 transfer left', { exact: false })).toBeVisible();
+  await expect(page.getByText('1 of 2 transfers left', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: "I'm done ✓" }).click();
 
   // Second half: the season finishes and the summer window opens.

@@ -1,3 +1,4 @@
+import { playerValue, WINDOW_SECONDS, windowBudget } from '@draft-xi/server/contracts';
 import type { GameSnapshot, LeagueView, MonteCarloView, PlaybackState, PoolView, SeasonView, TitlesRow, TradeView } from '@draft-xi/server/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DIALECTS } from './helpers/db';
@@ -76,7 +77,8 @@ describe.each(DIALECTS)('season on %s', (_name, open) => {
     expect(view.game.status).toBe('completed');
     expect(view.seasons).toEqual([expect.objectContaining({ number: 1, matchdays: 19, championTeamId: null })]);
     expect(view.playback).toMatchObject({ seasonNumber: 1, matchday: 0, playing: true, cap: 19 });
-    expect(view.round).toMatchObject({ phase: 'mini', seasonNumber: 1, transferLimit: 1 });
+    expect(view.round).toMatchObject({ phase: 'mini', seasonNumber: 1, transferLimit: 2 });
+    expect(Date.parse(view.round!.closesAt!)).toBeGreaterThan(Date.now() + (WINDOW_SECONDS - 10) * 1000);
     // Bots are done as soon as the window opens.
     for (const b of view.participants.filter((p) => p.isBot)) expect(view.round!.ready).toContain(b.id);
 
@@ -104,22 +106,45 @@ describe.each(DIALECTS)('season on %s', (_name, open) => {
     expect(end.body.playback.matchday).toBe(19);
   });
 
-  it('makes one transfer in the mini window, then replays the season with the new XI from matchday 20', async () => {
+  it('makes two budgeted transfers in the mini window, then replays the season with the new XI from matchday 20', async () => {
     const view = await snap(host, code);
     const me = view.me.participantId!;
     const before = (await host.get<SeasonView>(`/api/games/${code}/seasons/1`)).body;
     const pool = (await host.get<PoolView>('/api/pool')).body;
+    const ovr = (id: number) => pool.players.find((p) => p.id === id)!.overall;
+    // The budget comes from league points after matchday 19.
+    const myTeam = before.teams.find((t) => t.participantId === me)!.id;
+    const myPoints = before.standings[18]!.find((r) => r.teamId === myTeam)!.points;
+    expect(view.round!.budgetGrants[me]).toBe(windowBudget('mini', myPoints));
+    expect(view.round!.budgetLeft[me]).toBe(windowBudget('mini', myPoints));
+
     const taken = new Set(Object.values(view.round!.rosters).flatMap((r) => Object.values(r)));
-    const keeper = pool.players.filter((p) => p.primaryPosition === 'GK' && !taken.has(p.id)).sort((a, b) => b.overall - a.overall)[0]!;
+    const freeKeepers = pool.players.filter((p) => p.primaryPosition === 'GK' && !taken.has(p.id)).sort((a, b) => a.overall - b.overall);
     const striker = pool.players.find((p) => p.primaryPosition === 'ST' && !taken.has(p.id))!;
+    const oldKeeper = view.round!.rosters[me]!.GK!;
     expect((await host.post(`/api/games/${code}/transfers`, { slotKey: 'GK', playerId: striker.id })).status).toBe(400);
     expect((await host.post(`/api/games/${code}/transfers`, { slotKey: 'GK', playerId: [...taken][0] })).status).toBe(409);
+    const tooDear = freeKeepers.find((p) => playerValue(p.overall) - playerValue(ovr(oldKeeper)) > view.round!.budgetLeft[me]!);
+    if (tooDear) {
+      const res = await host.post<{ error: { code: string } }>(`/api/games/${code}/transfers`, { slotKey: 'GK', playerId: tooDear.id });
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('budget');
+    }
+
+    // Sell the keeper for the cheapest free one: the difference goes into the budget.
+    const cheap = freeKeepers[0]!;
+    expect((await host.post(`/api/games/${code}/transfers`, { slotKey: 'GK', playerId: cheap.id })).status).toBe(201);
+    const mid = (await snap(host, code)).round!;
+    expect(mid.budgetLeft[me]).toBe(windowBudget('mini', myPoints) + playerValue(ovr(oldKeeper)) - playerValue(cheap.overall));
+    // Then the best keeper that budget buys.
+    const keeper = [...freeKeepers].reverse().find((p) => p.id !== cheap.id && playerValue(p.overall) <= mid.budgetLeft[me]! + playerValue(cheap.overall))!;
     expect((await host.post(`/api/games/${code}/transfers`, { slotKey: 'GK', playerId: keeper.id })).status).toBe(201);
-    const second = pool.players.find((p) => p.primaryPosition === 'GK' && !taken.has(p.id) && p.id !== keeper.id)!;
-    expect((await host.post(`/api/games/${code}/transfers`, { slotKey: 'GK', playerId: second.id })).status).toBe(409);
+    const third = freeKeepers.find((p) => p.id !== keeper.id && p.id !== cheap.id)!;
+    expect((await host.post(`/api/games/${code}/transfers`, { slotKey: 'GK', playerId: third.id })).status).toBe(409);
     const round = (await snap(host, code)).round!;
     expect(round.rosters[me]!.GK).toBe(keeper.id);
-    expect(round.transfersUsed[me]).toBe(1);
+    expect(round.transfersUsed[me]).toBe(2);
+    expect(round.budgetLeft[me]).toBeGreaterThanOrEqual(0);
     // Bots wait: they only shop when the window closes, after the humans.
     const bots = view.participants.filter((p) => p.isBot).map((p) => p.id);
     expect(round.moves.filter((m) => m.kind === 'transfer' && bots.includes(m.participantId))).toHaveLength(0);
@@ -136,11 +161,11 @@ describe.each(DIALECTS)('season on %s', (_name, open) => {
     expect(full.teams.find((t) => t.participantId === me)!.lineup.find((s) => s.slotKey === 'GK')!.playerId).toBe(keeper.id);
     const after = await snap(host, code);
     expect(after.playback).toMatchObject({ seasonNumber: 1, matchday: 19, cap: 38 });
-    expect(after.round).toMatchObject({ phase: 'big', seasonNumber: 1, transferLimit: 3 });
+    expect(after.round).toMatchObject({ phase: 'big', seasonNumber: 1, transferLimit: 4 });
     const botMoves = after.round!.moves.filter((m) => m.kind === 'transfer' && m.windowKind === 'mini' && bots.includes(m.participantId));
     expect(botMoves.length).toBeGreaterThan(0);
     expect(botMoves.every((m) => m.inPlayerId !== keeper.id)).toBe(true);
-    for (const b of bots) expect(botMoves.filter((m) => m.participantId === b).length).toBeLessThanOrEqual(1);
+    for (const b of bots) expect(botMoves.filter((m) => m.participantId === b).length).toBeLessThanOrEqual(2);
     expect((await host.get(`/api/games/${code}/results`)).status).toBe(200);
   });
 

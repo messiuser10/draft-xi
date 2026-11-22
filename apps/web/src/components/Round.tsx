@@ -9,6 +9,7 @@ import {
   type GameSnapshot,
   type LeagueTeamView,
   type ParticipantView,
+  playerValue,
   type PoolPlayerView,
   type SeasonView,
   type SeriesLeaderboardView,
@@ -20,6 +21,7 @@ import { useAction } from '../lib/actions';
 import { api } from '../lib/api';
 import { type PoolData, positionsOf, TierBadge, toEngine } from '../lib/pool';
 import { useRematch, useToasts } from '../lib/socket';
+import { useSecondsLeft } from './Countdown';
 import { TeamBadge } from './TeamBadge';
 
 type Round = NonNullable<GameSnapshot['round']>;
@@ -29,6 +31,8 @@ const WINDOW_TITLE = { mini: 'Mid-season transfer window', big: 'Summer transfer
 function slotsOf(p: ParticipantView | undefined) {
   return p?.formation ? getFormation(p.formation).slots : [];
 }
+
+const money = (m: number) => `${m}M`;
 
 const playerLabel = (pool: PoolData, id: number | undefined) => {
   const p = id === undefined ? undefined : pool.playersById.get(id);
@@ -72,15 +76,21 @@ function MyXI({
   const [signing, setSigning] = useState<string | null>(null);
   const used = round.transfersUsed[me.id] ?? 0;
   const left = Math.max(0, round.transferLimit - used);
+  const budget = round.budgetLeft[me.id] ?? 0;
   return (
     <section className="card p-4">
       <div className="flex flex-wrap items-baseline gap-x-2">
         <h3 className="display text-xl">Your XI</h3>
         <p className="text-sm text-slate-500">
           ⭐ Captain gets +{CAPTAIN_BOOST} every match
-          {canTransfer ? ` · ${left} of ${round.transferLimit} transfer${round.transferLimit === 1 ? '' : 's'} left` : ''}
+          {canTransfer ? ` · ${left} of ${round.transferLimit} transfers left` : ''}
         </p>
       </div>
+      {canTransfer ? (
+        <p className="mt-1 text-sm">
+          💰 <strong>{money(budget)}</strong> to spend <span className="text-slate-500">(got {money(round.budgetGrants[me.id] ?? 0)} for your league points; selling a player adds his value)</span>
+        </p>
+      ) : null}
       <ul className="mt-3 grid gap-1">
         {slotsOf(me).map((slot) => {
           const id = roster[slot.key];
@@ -91,6 +101,7 @@ function MyXI({
               <div className="flex items-center gap-2">
                 <span className="w-10 text-xs font-bold text-slate-500">{slot.key}</span>
                 <span className="min-w-0 flex-1 truncate font-semibold">{player?.name ?? '—'}</span>
+                {player && canTransfer ? <span className="text-xs text-slate-500">{money(playerValue(player.overall))}</span> : null}
                 {player ? <TierBadge overall={player.overall} /> : null}
                 <button
                   type="button"
@@ -113,6 +124,7 @@ function MyXI({
                   slotType={slot.type}
                   current={player}
                   taken={new Set(Object.values(round.rosters).flatMap((r) => Object.values(r)))}
+                  budget={budget}
                   pool={pool}
                   busy={busy}
                   onSign={async (playerId) => {
@@ -132,6 +144,7 @@ function SignPlayer({
   slotType,
   current,
   taken,
+  budget,
   pool,
   busy,
   onSign,
@@ -139,21 +152,27 @@ function SignPlayer({
   slotType: Parameters<typeof fitsSlot>[1];
   current: PoolPlayerView | undefined;
   taken: Set<number>;
+  budget: number;
   pool: PoolData;
   busy: boolean;
   onSign: (playerId: number) => Promise<void>;
 }) {
   const [search, setSearch] = useState('');
+  // Selling the current player pays for part of the new one.
+  const spend = budget + (current ? playerValue(current.overall) : 0);
   const options = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const affordable = (p: PoolPlayerView) => playerValue(p.overall) <= spend;
     return pool.players
       .filter((p) => !taken.has(p.id) && fitsSlot(toEngine(p), slotType) && (q === '' || p.name.toLowerCase().includes(q)))
-      .sort((a, b) => b.overall - a.overall)
+      .sort((a, b) => Number(affordable(b)) - Number(affordable(a)) || b.overall - a.overall)
       .slice(0, 30);
-  }, [pool, taken, slotType, search]);
+  }, [pool, taken, slotType, search, spend]);
   return (
     <div className="mt-2 rounded-xl bg-white p-2 dark:bg-night-800">
-      <p className="text-xs text-slate-500">Free players who can play {slotType}. {current ? `${current.name} (${current.overall}) leaves.` : ''}</p>
+      <p className="text-xs text-slate-500">
+        Free players who can play {slotType}. {current ? `Selling ${current.name} brings in ${money(playerValue(current.overall))}, so you can spend up to ${money(spend)}.` : ''}
+      </p>
       <input className="input mt-1 min-h-9 w-full py-1" placeholder="Search players" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search free players" />
       <ul className="mt-2 grid max-h-64 gap-1 overflow-y-auto">
         {options.map((p) => (
@@ -161,8 +180,15 @@ function SignPlayer({
             <span className="min-w-0 flex-1 truncate">
               {p.name} <span className="text-xs text-slate-500">{pool.clubsById.get(p.clubId)?.shortName}</span>
             </span>
+            <span className={`text-xs font-semibold ${playerValue(p.overall) <= spend ? '' : 'text-red-500'}`}>{money(playerValue(p.overall))}</span>
             <TierBadge overall={p.overall} />
-            <button type="button" className="btn-primary min-h-8 px-2 py-0 text-xs" disabled={busy} onClick={() => void onSign(p.id)}>
+            <button
+              type="button"
+              className="btn-primary min-h-8 px-2 py-0 text-xs"
+              disabled={busy || playerValue(p.overall) > spend}
+              title={playerValue(p.overall) > spend ? 'Too expensive' : undefined}
+              onClick={() => void onSign(p.id)}
+            >
               Sign
             </button>
           </li>
@@ -204,7 +230,7 @@ function Trades({ snapshot, pool, round, me }: { snapshot: GameSnapshot; pool: P
   return (
     <section className="card p-4">
       <h3 className="display text-xl">Trades</h3>
-      <p className="text-sm text-slate-500">Swap one player for one. Both teams must agree, and each player takes the other's slot.</p>
+      <p className="text-sm text-slate-500">Swap one player for one with another team. No money changes hands and it does not use a transfer. Both teams must agree, and each player must be able to play the other's slot so both formations stay valid.</p>
       {teams.length === 0 ? (
         <p className="mt-3 text-sm text-slate-500">No other drafting teams.</p>
       ) : (
@@ -309,6 +335,17 @@ function Trades({ snapshot, pool, round, me }: { snapshot: GameSnapshot; pool: P
 
 // ---------- Transfer window ----------
 
+function WindowClock({ closesAt }: { closesAt: string | null }) {
+  const secs = useSecondsLeft(closesAt);
+  if (secs === null) return null;
+  const urgent = secs <= 30;
+  return (
+    <p className={`display text-2xl tabular-nums ${urgent ? 'text-red-500' : ''}`} role="timer" aria-label={`${secs} seconds until the window closes`}>
+      ⏱ {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}
+    </p>
+  );
+}
+
 export function TransferWindow({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData }) {
   const round = snapshot.round!;
   const { run, busy } = useAction();
@@ -329,9 +366,10 @@ export function TransferWindow({ snapshot, pool }: { snapshot: GameSnapshot; poo
             🔁 {WINDOW_TITLE[round.phase]}
           </h2>
           <p className="text-sm text-slate-500">
-            {round.transferLimit} transfer{round.transferLimit === 1 ? '' : 's'} per team, plus any trades. {waiting.length > 0 ? `Waiting for ${waiting.map((p) => p.teamName).join(', ')}.` : 'Everyone is done.'}
+            {round.transferLimit} transfers per team (sell a player, buy a free one with your budget), plus as many trades as you agree. {waiting.length > 0 ? `Waiting for ${waiting.map((p) => p.teamName).join(', ')}.` : 'Everyone is done.'}
           </p>
         </div>
+        <WindowClock closesAt={round.closesAt} />
         {me ? (
           <button type="button" className={ready ? 'btn-secondary' : 'btn-primary'} disabled={busy} onClick={() => void run(`/api/games/${code}/window/ready`, 'POST', { ready: !ready })}>
             {ready ? 'Not done yet' : "I'm done ✓"}

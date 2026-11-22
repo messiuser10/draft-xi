@@ -189,8 +189,22 @@ export function playbackMatchday(state: PlaybackState, nowMs: number): number {
 
 /** Seasons in one round; a mid-season window in each, and the big window between them. */
 export const ROUND_SEASONS = 2;
-/** Transfers each team may make per window. */
-export const TRANSFER_LIMITS = { mini: 1, big: 3 } as const;
+/** Transfers (buy one, sell the one in that slot) each team may make per window. Trades are unlimited. */
+export const TRANSFER_LIMITS = { mini: 2, big: 4 } as const;
+/** How long a transfer window stays open once its matchday is reached. */
+export const WINDOW_SECONDS = 180;
+/**
+ * Window budget, in millions: a base plus half a million per league point won so far (the first
+ * half of the season for the mid-season window, the whole season for the summer one).
+ */
+export const WINDOW_BUDGET_BASE = { mini: 10, big: 20 } as const;
+export function windowBudget(phase: 'mini' | 'big', points: number): number {
+  return WINDOW_BUDGET_BASE[phase] + Math.round(points / 2);
+}
+/** A player's transfer value in millions, from his overall rating (the only rating in data/). */
+export function playerValue(overall: number): number {
+  return Math.max(1, Math.round(5 * 1.155 ** (overall - 70)));
+}
 /** Overall points the captain gains in every match. */
 export const CAPTAIN_BOOST = 3;
 /** Club Spin: chance that a spin is golden (any club allowed). */
@@ -551,6 +565,12 @@ export interface RoundView {
   /** Transfers per team in the open window (0 when no window is open). */
   transferLimit: number;
   transfersUsed: Record<number, number>;
+  /** Money each team got for the open window (from its league points), in millions. */
+  budgetGrants: Record<number, number>;
+  /** Money each team has left in the open window: grant plus sales minus purchases. */
+  budgetLeft: Record<number, number>;
+  /** When the open window closes by itself (null when none is open). */
+  closesAt: string | null;
   /** Teams that marked themselves done in the open window. */
   ready: number[];
   /** Each team's current XI, by slot. */

@@ -182,6 +182,7 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
     close: async () => {
       games.dispose();
       draft.dispose();
+      rounds.dispose();
       io.disconnectSockets(true);
       await app.close();
       await io.close().catch(() => undefined);
