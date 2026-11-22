@@ -10,6 +10,7 @@ const PARAMS = [
   ['sensitivity', 'Sensitivity', 0.01],
   ['chaos', 'Chaos', 0.05],
   ['aiSpread', 'AI spread', 0.05],
+  ['aiCatchUp', 'AI catch-up', 0.05],
 ] as const;
 
 export function AdminLabPage() {

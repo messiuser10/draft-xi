@@ -19,6 +19,12 @@ export interface SimParams {
    * Human teams always keep their full ratings.
    */
   aiSpread: number;
+  /**
+   * 0 to 1. How far AI clubs close the gap to the drafted teams: each AI club's attack and defense
+   * rise by this share of (drafted average minus AI average). Drafted XIs are all-stars taken from
+   * every club, so without this they win almost every title. 0 turns it off.
+   */
+  aiCatchUp: number;
 }
 
 export const TIEBREAK_KEYS = ['goalDifference', 'goalsFor', 'headToHead', 'wins'] as const;
@@ -41,6 +47,7 @@ export const DEFAULT_SIM_PARAMS: Readonly<SimParams> = {
   points: { win: 3, draw: 1, loss: 0 },
   tiebreakers: ['goalDifference', 'goalsFor', 'headToHead'],
   aiSpread: 0.4,
+  aiCatchUp: 0.8,
 };
 
 export function resolveParams(overrides: Partial<SimParams> = {}): SimParams {

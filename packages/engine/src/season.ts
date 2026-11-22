@@ -91,7 +91,29 @@ export const INJURY_REPLACEMENT_DROP = 10;
 
 export function rateTeams(inputs: readonly SeasonTeamInput[], params: SimParams): SeasonTeam[] {
   const rated = inputs.map((t) => ({ ...t, rating: rateTeam(t.lineup, { chemistry: params.chemistry }) }));
-  return spreadAi(rated, params.aiSpread);
+  return catchUpAi(spreadAi(rated, params.aiSpread), params.aiCatchUp);
+}
+
+/**
+ * Lifts every AI club by `share` of the gap between the drafted teams' average and the best AI
+ * club (see SimParams.aiCatchUp), so AI clubs keep their order but the top ones can contend.
+ */
+export function catchUpAi<T extends { kind: SeasonTeamInput['kind']; rating: TeamRating }>(teams: readonly T[], share: number): T[] {
+  const k = Math.min(1, Math.max(0, share));
+  const ai = teams.filter((t) => t.kind === 'ai');
+  const drafted = teams.filter((t) => t.kind !== 'ai');
+  if (k === 0 || ai.length === 0 || drafted.length === 0) return [...teams];
+  const best = ai.reduce((a, b) => (b.rating.strength > a.rating.strength ? b : a)).rating;
+  const avg = (f: (r: TeamRating) => number) => drafted.reduce((s, t) => s + f(t.rating), 0) / drafted.length;
+  const liftAtt = Math.max(0, k * (avg((r) => r.attack) - best.attack));
+  const liftDef = Math.max(0, k * (avg((r) => r.defense) - best.defense));
+  if (liftAtt === 0 && liftDef === 0) return [...teams];
+  return teams.map((t) => {
+    if (t.kind !== 'ai') return t;
+    const attack = round2(t.rating.attack + liftAtt);
+    const defense = round2(t.rating.defense + liftDef);
+    return { ...t, rating: { ...t.rating, attack, defense, strength: round2((attack + defense) / 2) } };
+  });
 }
 
 /** Pulls AI clubs' attack and defense towards the AI average by `spread` (see SimParams.aiSpread). */

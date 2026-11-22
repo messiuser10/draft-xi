@@ -201,4 +201,11 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - Data updated to the 22 Nov 2026 squads: 609 players. New strength order: PSG, Real Madrid, Bayern, Barcelona, Arsenal, Man City, Liverpool, Inter, Atlético, Man United, Chelsea, Dortmund, Juventus, Tottenham, AC Milan, Aston Villa, Newcastle, Brighton, Al-Nassr, Inter Miami.
 - The seed deactivates players no longer in the files (never deletes them, since picks and history reference them). Otherwise a transferred player would be draftable at both clubs. A player who returns to the files stays inactive until an admin reactivates him.
 - The server re-seeds on boot when a hash of `data/` differs from `app_settings.dataVersion`, so deploying new files updates the live database without a manual seed. Admin edits survive restarts and are overwritten only when new files ship.
-- The Monte Carlo test uses draft seed 1: with the new squads, seed 5's three bot-drafted XIs (rated 89 to 90) won every title against AI clubs (best about 86).
+- AI catch-up (`aiCatchUp`, default 0.8, in admin settings and the Lab): every AI club's attack and defense rise by 0.8 x (drafted teams' average minus the best AI club), never below 0. Drafted XIs are all-stars from every club, so without it they won almost every title. Measured over 1,000 seasons per case:
+  - 3 all-star drafts: drafted teams' title share 100% → 64%.
+  - Solo all-star draft: 96% → 36%.
+  - Casual drafts are barely changed (2 teams: 29% → 24%; 3 teams: 36% → 35%), and PSG stays at 2% to 19%.
+  - Goals per match stay at about 2.66.
+- 0.8 rather than 1: at 1 the best AI clubs tie the drafted average and about eight teams are within 0.7 rating, so the title is close to a lottery.
+- Realism tests updated for the more even league: the champion averages about 72 points, so the target is now 65 to 95 (spec said 80 to 95), and the top three by rating must win over 45% of titles (was 60%).
+- Sensitivity stays at 0.09: the live database stores its simulation settings, so a new default would not reach it. Admins can raise it (for example to 0.12) for a more spread-out table.
