@@ -209,3 +209,11 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
   - One clearly best (all-star) team: wins about 62%, down from 95%.
   - Three all-star drafts: win 86% between them (they are the three best teams), with the favourite at 40%.
 - The PSG complaint is covered by form too: PSG's title chance is 11% to 19% depending on the draft.
+- Realistic retune (simulation tuning version 2), measured over 4 league types, 3 drafts each and 120 seasons each:
+  - New defaults: baseGoals 1.15, homeAdvantage 1.3, sensitivity 0.07, form 2, streaks 1.5 (each matchday keeps 85% of the last), sharedGoals 0.3.
+  - Champion 85 points, bottom team 22, 2.83 goals per match, 45% home wins, 25% draws.
+  - Top-5 vs bottom-5: the underdog wins 15% and draws 21%.
+  - Favourite's title chance: 25% to 44%.
+  - Before the retune: draws 21%, home wins 42%, and a clearly best team won about 50%.
+- Shared goals: both sides get Poisson(shared) goals added and their own expected goals reduced by the same amount. This is the standard bivariate Poisson fix for too few draws in independent-Poisson models.
+- Stored simulation parameters still at the old defaults (1.25, 1.1, 0.09, aiSpread 0.4, aiCatchUp 0.8) are moved to the new defaults once on boot. The version is kept in `app_settings` under `simulation.tuningVersion`, so an admin who picks an old value later keeps it.
