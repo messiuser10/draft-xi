@@ -178,7 +178,7 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - Player price (millions) = max(1, round(5 × 1.155^(overall − 70))), from the overall rating, the only rating in data/: about 1M at 60, 5M at 70, 21M at 80, 103M at 91.
 - Window budget = 10M (mid-season) or 20M (summer) + 0.5M per league point won so far in that season; it is not carried over. A transfer costs the new player's price minus the sold player's price.
 - Bots buy only players they can afford with their window budget.
-- A window closes by itself 3 minutes after the playback reaches it (closing time = playback time left at the current speed + 180 s, stored in window_state so it survives a restart).
+- (Replaced) Windows no longer close on a 3-minute timer; see the own-pace lines below.
 - Captain: +3 overall (max 99) in every match. Teams without a captain before season 1 get their highest rated player. A captain who is transferred or traded away is replaced by the incoming player.
 - Re-spin: one per team per draft, on its own turn, only when the wheel landed on a club and another club is possible. The re-spin never lands on the same club, restarts the pick clock, and is fixed by seed like the first spin.
 - Golden spin: 5% of spins (fixed by seed); the team may draft from any club. Bots and auto-picks then choose freely.
@@ -193,3 +193,8 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - Draft room player list shows only players you can draft (not taken, and fitting one of your open slots); the "Hide drafted" and "Fits my open slots" toggles are gone. Spectators still see every undrafted player.
 - Every listed player has a green Draft button (disabled until your turn). If he fits exactly one open slot (or the slot you tapped), it drafts at once; if he fits several, it asks where he should play.
 - Lists inside a grid use `grid-cols-1`: an implicit grid column grows to its widest line, which on phones made the browser zoom the whole page out.
+- Season playback is always own-pace: each player plays, pauses, speeds up or skips on their own screen. The host no longer drives everyone's playback, and the playback setting is gone.
+- When a player's screen reaches the break, it reports "watched". The transfer window opens (transfers, trades, I'm done) only when every connected human has watched; until then they see who they are waiting for.
+- A window closes only when every connected human drafting team has pressed I'm done (at least one must). Offline players are not waited for. Bots are done at once. An admin can force a window closed.
+- Stats boards: most goals, most assists, and clean sheets per team (team names, not keepers). The best-rating board is gone.
+- AI clubs are pulled toward the AI average rating (`aiSpread`, default 0.4, editable in admin settings and the Lab). In a 200-season Monte Carlo, PSG's title chance went from 76% (no pull) to 31%, with Real Madrid at 18% and the best drafted team at 11%.

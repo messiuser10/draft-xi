@@ -33,8 +33,6 @@ async function main(): Promise<void> {
   await server.ctx.auth.deleteExpiredSessions();
   const restored = await server.ctx.draft.restore();
   if (restored > 0) server.app.log.info(`Restored pick timers for ${restored} draft(s)`);
-  const windows = await server.ctx.rounds.restore();
-  if (windows > 0) server.app.log.info(`Restored timers for ${windows} transfer window(s)`);
   await server.app.listen({ host: config.HOST, port: config.PORT });
 
   const shutdown = (signal: string) => {

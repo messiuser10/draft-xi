@@ -150,10 +150,10 @@ function GameDefaults({ value, onChange }: { value: GameSettings; onChange: (v: 
 }
 
 function SimParams({ value, onChange }: { value: Values; onChange: (v: Values) => void }) {
-  const num = (key: string, label: string, step = 0.01) => (
+  const num = (key: string, label: string, step = 0.01, fallback?: number) => (
     <label className="text-xs">
       {label}
-      <input className="input" type="number" step={step} value={value[key] as number} onChange={(e) => onChange({ ...value, [key]: Number(e.target.value) })} />
+      <input className="input" type="number" step={step} value={(value[key] as number | undefined) ?? fallback ?? ''} onChange={(e) => onChange({ ...value, [key]: Number(e.target.value) })} />
     </label>
   );
   const points = value.points as { win: number; draw: number; loss: number };
@@ -172,6 +172,7 @@ function SimParams({ value, onChange }: { value: Values; onChange: (v: Values) =
         {num('chaos', 'Chaos (0 to 1)')}
         {num('outOfPositionPenalty', 'Out of position penalty', 1)}
         {num('reserveRating', 'Academy Reserve rating', 1)}
+        {num('aiSpread', 'AI club spread (0 to 1)', 0.05, 0.4)}
       </div>
       <div className="flex flex-wrap gap-4 text-sm">
         <label className="flex items-center gap-1">

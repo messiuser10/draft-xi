@@ -21,12 +21,11 @@ import { Link, Navigate, useParams } from 'react-router';
 import { ClubShield } from '../components/Kickoff';
 import { RoundOver, SeasonLeaders, SeriesLeaderboard, TransferWindow } from '../components/Round';
 import { TeamBadge } from '../components/TeamBadge';
-import { useAction } from '../lib/actions';
 import { api } from '../lib/api';
 import { useSeason } from '../lib/league';
 import { usePool } from '../lib/pool';
 import { BAND_BORDER, bandFor, useSite } from '../lib/session';
-import { serverNow, useGame } from '../lib/socket';
+import { useGame } from '../lib/socket';
 import { PageSkeleton } from '../components/Skeleton';
 import { ErrorCard } from '../components/ErrorBoundary';
 
@@ -50,14 +49,13 @@ export function SeasonPage() {
   return <Season snapshot={snapshot} />;
 }
 
-/** Playback that ticks: the shared state in synchronized mode, a local copy in own-pace mode. */
 /** Matchdays played so far in a season: 19 while its mid-season window is open, else 38. */
 export function capOf(snapshot: GameSnapshot, seasonNumber: number): number {
   return snapshot.seasons.find((s) => s.number === seasonNumber)?.matchdays ?? SEASON_MATCHDAYS;
 }
 
+/** Playback on this screen only: every player watches at their own speed and can skip ahead. */
 function usePlayback(snapshot: GameSnapshot) {
-  const synced = snapshot.game.settings.playbackMode === 'synchronized';
   const shared = snapshot.playback;
   const latest = snapshot.seasons.at(-1);
   const [local, setLocal] = useState<PlaybackState>(() => {
@@ -71,10 +69,13 @@ function usePlayback(snapshot: GameSnapshot) {
     }
     const seasonNumber = shared?.seasonNumber ?? snapshot.seasons.at(-1)?.number ?? 1;
     const cap = capOf(snapshot, seasonNumber);
-    return { seasonNumber, matchday: skip ? cap : 0, playing: !skip, speed: 1, anchorAt: new Date().toISOString(), cap };
+    // Already watched this half (a reload): open at the break. Otherwise start where this half starts.
+    const me = snapshot.me.participantId;
+    const seen = skip || (me !== null && (snapshot.round?.watched ?? []).includes(me));
+    const from = shared?.seasonNumber === seasonNumber ? Math.min(shared.matchday, cap) : 0;
+    return { seasonNumber, matchday: seen ? cap : from, playing: !seen, speed: 1, anchorAt: new Date().toISOString(), cap };
   });
-  const clock = synced ? serverNow : Date.now;
-  const [now, setNow] = useState(() => clock());
+  const [now, setNow] = useState(() => Date.now());
   // Own pace: when the next half or the next season arrives, carry on from where this screen is.
   const progress = `${latest?.number ?? 0}:${latest?.matchdays ?? 0}`;
   const [seen, setSeen] = useState(progress);
@@ -88,25 +89,16 @@ function usePlayback(snapshot: GameSnapshot) {
       setLocal({ ...local, matchday: at, playing: true, anchorAt: new Date(t).toISOString(), cap: capOf(snapshot, local.seasonNumber) });
     }
   }
-  // A viewer who cannot control synchronized playback can still jump to the end on their own screen.
-  const [personal, setPersonal] = useState<PlaybackState | null>(null);
-  const base = personal ?? (synced && shared ? shared : local);
-  const cap = capOf(snapshot, base.seasonNumber);
-  const state: PlaybackState = { ...base, cap: Math.min(base.cap ?? SEASON_MATCHDAYS, cap) };
+  const cap = capOf(snapshot, local.seasonNumber);
+  const state: PlaybackState = { ...local, cap: Math.min(local.cap ?? SEASON_MATCHDAYS, cap) };
   useEffect(() => {
     if (!state.playing) return;
-    const id = setInterval(() => setNow(clock()), 250);
+    const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
-  }, [state.playing, clock]);
+  }, [state.playing]);
   const matchday = playbackMatchday(state, now);
 
-  const { run } = useAction();
-  const canControl = !synced || snapshot.me.isHost || snapshot.me.isAdmin;
   const control = (action: 'play' | 'pause' | 'speed' | 'jump' | 'end', extra: { speed?: PlaybackSpeed; matchday?: number; seasonNumber?: number } = {}) => {
-    if (synced) {
-      void run(`/api/games/${snapshot.game.code}/playback`, 'POST', { action, ...extra });
-      return;
-    }
     const t = Date.now();
     const cur = playbackMatchday(local, t);
     let next: PlaybackState = { ...local, matchday: cur, anchorAt: new Date(t).toISOString() };
@@ -121,12 +113,8 @@ function usePlayback(snapshot: GameSnapshot) {
     setLocal(next);
     setNow(t);
   };
-  const skipToEnd = () => {
-    if (canControl) control('end');
-    else setPersonal({ ...state, matchday: cap, playing: false, anchorAt: new Date().toISOString() });
-  };
-  const backToLive = () => setPersonal(null);
-  return { state, matchday, cap, control, canControl, synced, skipToEnd, backToLive, personal: personal !== null };
+  const skipToEnd = () => control('end');
+  return { state, matchday, cap, control, skipToEnd };
 }
 
 function Season({ snapshot }: { snapshot: GameSnapshot }) {
@@ -157,9 +145,13 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
   const round = snapshot.round;
   const latest = snapshot.seasons.at(-1)?.number ?? 1;
   const isLatest = data.number === latest;
-  const showWindow =
-    round !== null && isLatest && ((round.phase === 'mini' && atBreak) || (round.phase === 'big' && done && round.seasonNumber === data.number));
-  const showRoundOver = round !== null && round.phase === 'over' && isLatest && done;
+  // This screen has reached the break (or the end of the round) for the latest season.
+  const reached =
+    round !== null && isLatest && ((round.phase === 'mini' && atBreak) || ((round.phase === 'big' || round.phase === 'over') && done && round.seasonNumber === data.number));
+  const everyone = round?.allWatched ?? true;
+  const showWindow = reached && everyone && (round.phase === 'mini' || round.phase === 'big');
+  const showRoundOver = reached && everyone && round.phase === 'over';
+  const showWaiting = reached && !everyone;
   const busy = snapshot.game.status === 'simulating';
   const skipToEnd = () => {
     playback.skipToEnd();
@@ -203,6 +195,8 @@ function Season({ snapshot }: { snapshot: GameSnapshot }) {
         </section>
       ) : null}
       {done ? <ChampionBanner season={data} teams={teams} /> : null}
+      <WatchedReporter snapshot={snapshot} reached={reached} />
+      {showWaiting ? <WaitingForOthers snapshot={snapshot} /> : null}
       {showWindow && pool.data ? <TransferWindow snapshot={snapshot} pool={pool.data} /> : null}
       {showRoundOver ? <RoundOver snapshot={snapshot} /> : null}
       {done ? <SeasonLeaders season={data} title={`Season ${data.number} stats`} /> : atBreak ? <SeasonLeaders season={data} title="Half-season stats" /> : null}
@@ -268,13 +262,40 @@ function initialTable(season: SeasonView): StandingView[] {
 
 // ---------- Controls ----------
 
+/** Tells the server once this player has watched up to the break, so the window can open for all. */
+function WatchedReporter({ snapshot, reached }: { snapshot: GameSnapshot; reached: boolean }) {
+  const me = snapshot.me.participantId;
+  const round = snapshot.round;
+  const already = me === null || !round || round.watched.includes(me);
+  const key = round ? `${round.phase}:${round.seasonNumber}` : '';
+  const code = snapshot.game.code;
+  useEffect(() => {
+    if (!reached || already) return;
+    void api(`/api/games/${code}/window/watched`, { method: 'POST' }).catch(() => undefined);
+  }, [reached, already, key, code]);
+  return null;
+}
+
+function WaitingForOthers({ snapshot }: { snapshot: GameSnapshot }) {
+  const round = snapshot.round!;
+  const waiting = snapshot.participants.filter((p) => p.teamName !== null && !p.isBot && p.isConnected && !round.watched.includes(p.id));
+  const next = round.phase === 'over' ? 'the final results' : 'the transfer window';
+  return (
+    <section className="card p-4 text-center ring-2 ring-pitch-500" role="status" aria-live="polite">
+      <p className="display text-2xl">⏳ Waiting for everyone to finish watching</p>
+      <p className="mt-1 text-slate-500">
+        {waiting.length > 0 ? `Still watching: ${waiting.map((p) => p.teamName).join(', ')}.` : 'Almost there…'} Then {next} opens for everyone.
+      </p>
+    </section>
+  );
+}
+
 function Controls({ snapshot, playback, onSkip }: { snapshot: GameSnapshot; playback: ReturnType<typeof usePlayback>; onSkip: () => void }) {
-  const { state, matchday, control, canControl, synced, personal, backToLive, cap } = playback;
+  const { state, matchday, control, cap } = playback;
   const seasons = snapshot.seasons;
   return (
     <section className="card flex flex-wrap items-center gap-2 p-3" aria-label="Playback controls">
-      {canControl ? (
-        <>
+      <>
           <button type="button" className="btn-primary min-w-24" onClick={() => control(state.playing ? 'pause' : 'play')}>
             {state.playing ? 'Pause' : matchday >= cap ? 'Replay' : 'Play'}
           </button>
@@ -293,27 +314,11 @@ function Controls({ snapshot, playback, onSkip }: { snapshot: GameSnapshot; play
             <input type="range" min={0} max={cap} value={matchday} onChange={(e) => control('jump', { matchday: Number(e.target.value) })} className="flex-1 accent-pitch-500" aria-label="Jump to matchday" />
             <span className="w-6 tabular-nums">{matchday}</span>
           </label>
-        </>
-      ) : (
-        <>
-          <p className="flex-1 text-sm text-slate-500">
-            {personal ? 'You skipped ahead on your screen' : `The host controls playback · ${state.playing ? `playing at ${state.speed}x` : 'paused'}`}
-          </p>
-          {personal ? (
-            <button type="button" className="btn-secondary" onClick={backToLive}>
-              Back to live
-            </button>
-          ) : matchday < cap ? (
-            <button type="button" className="btn-secondary" onClick={onSkip}>
-              ⏭ Skip to end (just me)
-            </button>
-          ) : null}
-        </>
-      )}
+      </>
       {seasons.length > 1 ? (
         <label className="text-sm">
           <span className="sr-only">Season</span>
-          <select className="input min-h-11" value={state.seasonNumber} disabled={!canControl} onChange={(e) => control('jump', { matchday: 0, seasonNumber: Number(e.target.value) })}>
+          <select className="input min-h-11" value={state.seasonNumber} onChange={(e) => control('jump', { matchday: 0, seasonNumber: Number(e.target.value) })}>
             {seasons.map((s) => (
               <option key={s.number} value={s.number}>
                 Season {s.number}
@@ -322,7 +327,7 @@ function Controls({ snapshot, playback, onSkip }: { snapshot: GameSnapshot; play
           </select>
         </label>
       ) : null}
-      <span className="text-xs text-slate-500">{synced ? 'Synchronized' : 'Own pace'} · {MATCHDAY_MS / 1000}s per matchday at 1x</span>
+      <span className="text-xs text-slate-500">Your own pace · {MATCHDAY_MS / 1000}s per matchday at 1x</span>
     </section>
   );
 }

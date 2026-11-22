@@ -141,6 +141,10 @@ export function registerDraftRoutes(app: FastifyInstance, ctx: ServerContext): v
     await rounds.setReady(code(req.params), req.user, windowReadySchema.parse(req.body).ready);
     return { ok: true };
   });
+  app.post('/api/games/:code/window/watched', async (req) => {
+    await rounds.markWatched(code(req.params), req.user);
+    return { ok: true };
+  });
   app.post('/api/games/:code/window/close', async (req) => {
     await rounds.close(code(req.params), req.user);
     return { ok: true };

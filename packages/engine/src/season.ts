@@ -9,7 +9,7 @@ import {
   simulateScore,
 } from './match';
 import { resolveParams, type SimParams } from './params';
-import { rateTeam, round2 } from './ratings';
+import { rateTeam, round2, type TeamRating } from './ratings';
 import { deriveRng } from './rng';
 import { LeagueTable, type StandingRow } from './table';
 import type { TeamKind } from './types';
@@ -90,7 +90,24 @@ export const INJURY_MAX_MATCHES = 5;
 export const INJURY_REPLACEMENT_DROP = 10;
 
 export function rateTeams(inputs: readonly SeasonTeamInput[], params: SimParams): SeasonTeam[] {
-  return inputs.map((t) => ({ ...t, rating: rateTeam(t.lineup, { chemistry: params.chemistry }) }));
+  const rated = inputs.map((t) => ({ ...t, rating: rateTeam(t.lineup, { chemistry: params.chemistry }) }));
+  return spreadAi(rated, params.aiSpread);
+}
+
+/** Pulls AI clubs' attack and defense towards the AI average by `spread` (see SimParams.aiSpread). */
+export function spreadAi<T extends { kind: SeasonTeamInput['kind']; rating: TeamRating }>(teams: readonly T[], spread: number): T[] {
+  const k = Math.min(1, Math.max(0, spread));
+  const ai = teams.filter((t) => t.kind === 'ai');
+  if (k === 1 || ai.length < 2) return [...teams];
+  const mean = (f: (r: TeamRating) => number) => ai.reduce((s, t) => s + f(t.rating), 0) / ai.length;
+  const att = mean((r) => r.attack);
+  const def = mean((r) => r.defense);
+  return teams.map((t) => {
+    if (t.kind !== 'ai') return t;
+    const attack = round2(att + k * (t.rating.attack - att));
+    const defense = round2(def + k * (t.rating.defense - def));
+    return { ...t, rating: { ...t.rating, attack, defense, strength: round2((attack + defense) / 2) } };
+  });
 }
 
 function statKey(teamId: string, slotKey: string, playerId: number | null): string {
@@ -143,9 +160,13 @@ export function simulateSeason(inputs: readonly SeasonTeamInput[], options: Seas
         reserve: true,
       };
     });
-    return changed
-      ? { lineup, rating: rateTeam(lineup, { chemistry: params.chemistry }) }
-      : { lineup: team.lineup, rating: team.rating };
+    if (!changed) return { lineup: team.lineup, rating: team.rating };
+    // Keep the team's (possibly AI-spread) rating and take off only what the injuries cost.
+    const whole = rateTeam(team.lineup, { chemistry: params.chemistry });
+    const hurt = rateTeam(lineup, { chemistry: params.chemistry });
+    const attack = round2(team.rating.attack + hurt.attack - whole.attack);
+    const defense = round2(team.rating.defense + hurt.defense - whole.defense);
+    return { lineup, rating: { ...hurt, attack, defense, strength: round2((attack + defense) / 2) } };
   };
 
   const rollInjuries = (team: SeasonTeam, lineup: readonly LineupEntry[], key: string) => {

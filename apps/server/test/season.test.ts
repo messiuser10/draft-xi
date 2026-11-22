@@ -1,4 +1,4 @@
-import { playerValue, WINDOW_SECONDS, windowBudget } from '@draft-xi/server/contracts';
+import { playerValue, windowBudget } from '@draft-xi/server/contracts';
 import type { GameSnapshot, LeagueView, MonteCarloView, PlaybackState, PoolView, SeasonView, TitlesRow, TradeView } from '@draft-xi/server/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DIALECTS } from './helpers/db';
@@ -78,7 +78,10 @@ describe.each(DIALECTS)('season on %s', (_name, open) => {
     expect(view.seasons).toEqual([expect.objectContaining({ number: 1, matchdays: 19, championTeamId: null })]);
     expect(view.playback).toMatchObject({ seasonNumber: 1, matchday: 0, playing: true, cap: 19 });
     expect(view.round).toMatchObject({ phase: 'mini', seasonNumber: 1, transferLimit: 2 });
-    expect(Date.parse(view.round!.closesAt!)).toBeGreaterThan(Date.now() + (WINDOW_SECONDS - 10) * 1000);
+    // Nobody is connected in tests, so the window counts as watched; a player can still report watching.
+    expect(view.round!.allWatched).toBe(true);
+    expect((await host.post(`/api/games/${code}/window/watched`)).status).toBe(200);
+    expect((await snap(host, code)).round!.watched).toContain(view.me.participantId);
     // Bots are done as soon as the window opens.
     for (const b of view.participants.filter((p) => p.isBot)) expect(view.round!.ready).toContain(b.id);
 

@@ -46,8 +46,7 @@ function Reveal({ snapshot }: { snapshot: GameSnapshot }) {
         /* storage unavailable */
       }
     }
-    if (!(await run(`/api/games/${code}/season`))) return;
-    if (skip && snapshot.game.settings.playbackMode === 'synchronized') await run(`/api/games/${code}/playback`, 'POST', { action: 'end' });
+    await run(`/api/games/${code}/season`);
   };
   const all = shown >= order.length;
   useEffect(() => {

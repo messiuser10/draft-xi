@@ -13,6 +13,12 @@ export interface SimParams {
   points: { win: number; draw: number; loss: number };
   /** Order of tiebreakers after points; a seeded draw always settles what is left. */
   tiebreakers: TiebreakKey[];
+  /**
+   * 0 to 1. How far apart AI clubs play: 1 keeps their real-data ratings, lower pulls each AI
+   * club's attack and defense towards the AI average, so no one club runs away with the league.
+   * Human teams always keep their full ratings.
+   */
+  aiSpread: number;
 }
 
 export const TIEBREAK_KEYS = ['goalDifference', 'goalsFor', 'headToHead', 'wins'] as const;
@@ -34,6 +40,7 @@ export const DEFAULT_SIM_PARAMS: Readonly<SimParams> = {
   injuries: false,
   points: { win: 3, draw: 1, loss: 0 },
   tiebreakers: ['goalDifference', 'goalsFor', 'headToHead'],
+  aiSpread: 0.4,
 };
 
 export function resolveParams(overrides: Partial<SimParams> = {}): SimParams {

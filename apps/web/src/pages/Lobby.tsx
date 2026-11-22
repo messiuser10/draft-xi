@@ -382,7 +382,6 @@ function SettingsCard({ snapshot }: { snapshot: GameSnapshot }) {
     ['Strict positions', s.strictPositions ? 'On' : 'Off'],
     ['Drafted leave AI squads', s.removeDraftedFromAi ? 'On' : 'Off'],
     ['Bots', s.botsAllowed ? 'Allowed' : 'Off'],
-    ['Playback', s.playbackMode === 'synchronized' ? 'Synchronized' : 'Own pace'],
   ];
   return (
     <section className="card p-5">

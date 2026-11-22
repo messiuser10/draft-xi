@@ -92,7 +92,10 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
       ...(await seasons.snapshotExtras(game)),
       round: await rounds.view(game),
     }),
-    connectionChanged: (gameId, participantId, connected) => draft.connectionChanged(gameId, participantId, connected),
+    connectionChanged: async (gameId, participantId, connected) => {
+      await draft.connectionChanged(gameId, participantId, connected);
+      await rounds.connectionChanged(gameId);
+    },
     draftStarted: (gameId) => draft.schedule(gameId),
   });
 
@@ -182,7 +185,6 @@ export async function buildServer(options: BuildOptions): Promise<BuiltServer> {
     close: async () => {
       games.dispose();
       draft.dispose();
-      rounds.dispose();
       io.disconnectSockets(true);
       await app.close();
       await io.close().catch(() => undefined);

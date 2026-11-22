@@ -37,7 +37,6 @@ test('create a game, bot-draft it and play a round', async ({ page }) => {
   await page.getByRole('button', { name: 'Skip to mid-season' }).click();
   await expect(page.getByRole('heading', { name: /Mid-season transfer window/ })).toBeVisible();
   await page.getByRole('button', { name: 'Replace', exact: true }).first().click();
-  await expect(page.getByRole('timer')).toBeVisible();
   await expect(page.getByText('to spend', { exact: false })).toBeVisible();
   // Affordable players are listed first.
   await page.getByRole('button', { name: 'Sign', exact: true }).first().click();
@@ -52,9 +51,9 @@ test('create a game, bot-draft it and play a round', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /Season 1 stats/ })).toBeVisible();
 
   // Season 2, both halves, then the round is over.
-  await page.getByRole('button', { name: 'Close window & play on' }).click();
+  await page.getByRole('button', { name: "I'm done ✓" }).click();
   await page.getByRole('button', { name: 'Skip to mid-season' }).click();
-  await page.getByRole('button', { name: 'Close window & play on' }).click();
+  await page.getByRole('button', { name: "I'm done ✓" }).click();
   await page.getByRole('button', { name: 'Skip to the end' }).click();
   await expect(page.getByRole('heading', { name: 'Both seasons are in the books' })).toBeVisible();
   await expect(page.getByRole('heading', { name: /Game leaderboard/ })).toBeVisible();

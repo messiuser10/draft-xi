@@ -12,8 +12,6 @@ import { and, asc, eq, inArray, or } from 'drizzle-orm';
 import { actorOf, type AuthUser, requireUser } from '../auth/service';
 import { SYSTEM_ACTOR, writeAudit } from '../audit';
 import {
-  MATCHDAY_MS,
-  type PlaybackState,
   playerValue,
   ROUND_SEASONS,
   type RoundPhase,
@@ -22,7 +20,6 @@ import {
   type SeriesLeaderboardView,
   TRANSFER_LIMITS,
   type TradeView,
-  WINDOW_SECONDS,
   windowBudget,
 } from '../contracts';
 import type { AppDb, Database } from '../db/database';
@@ -50,8 +47,8 @@ export interface WindowState {
   nextCode?: string | null;
   /** Budget each team got for this window, by participant id (JSON keys are strings). */
   grants?: Record<string, number>;
-  /** When the window closes by itself. */
-  closesAt?: string;
+  /** Teams whose players have watched the matches up to this break (each player watches at their own pace). */
+  watched?: number[];
 }
 
 type WindowMove = Pick<MoveRow, 'participantId' | 'outPlayerId' | 'inPlayerId' | 'kind' | 'windowKind' | 'seasonNumber'>;
@@ -114,7 +111,6 @@ export interface WindowCloser {
 
 export class RoundService {
   private closer: WindowCloser | null = null;
-  private readonly windowTimers = new Map<number, NodeJS.Timeout>();
 
   constructor(
     private readonly database: Database,
@@ -129,43 +125,18 @@ export class RoundService {
     this.closer = closer;
   }
 
-  dispose(): void {
-    for (const timer of this.windowTimers.values()) clearTimeout(timer);
-    this.windowTimers.clear();
+  /**
+   * Human teams whose player must still act: connected, drafting humans. Offline players are
+   * skipped so one closed tab cannot hold up everyone else.
+   */
+  private waitingOn(parts: readonly ParticipantRow[]): ParticipantRow[] {
+    return parts.filter((p) => p.teamName !== null && !p.isBot && p.isConnected);
   }
 
-  /** On boot: re-arm the timer of every open transfer window from its stored closing time. */
-  async restore(): Promise<number> {
-    const { db, t } = this.database;
-    const games = await db.select().from(t.games).where(eq(t.games.status, 'completed'));
-    let n = 0;
-    for (const g of games) {
-      const w = windowOf(g);
-      if (w?.closesAt && (w.phase === 'mini' || w.phase === 'big')) {
-        this.scheduleClose(g.id, w.closesAt);
-        n++;
-      }
-    }
-    return n;
-  }
-
-  private scheduleClose(gameId: number, closesAt: string): void {
-    const existing = this.windowTimers.get(gameId);
-    if (existing) clearTimeout(existing);
-    const timer = setTimeout(() => {
-      this.windowTimers.delete(gameId);
-      void this.closeOnTime(gameId, closesAt).catch(() => undefined);
-    }, Math.max(0, Date.parse(closesAt) - Date.now()));
-    timer.unref?.();
-    this.windowTimers.set(gameId, timer);
-  }
-
-  /** The timer fired: close the window, unless it already closed (or a later one is open). */
-  private async closeOnTime(gameId: number, closesAt: string): Promise<void> {
-    const game = await this.getById(gameId);
-    const phase = phaseOf(game);
-    if ((phase !== 'mini' && phase !== 'big') || windowOf(game)?.closesAt !== closesAt) return;
-    await this.closer!.closeWindow(gameId, null);
+  /** Every connected human has watched up to the break (bots never need to). */
+  private everyoneWatched(w: WindowState | null, parts: readonly ParticipantRow[]): boolean {
+    const watched = new Set(w?.watched ?? []);
+    return this.waitingOn(parts).every((p) => watched.has(p.id));
   }
 
   // ---------- Reads ----------
@@ -208,7 +179,8 @@ export class RoundService {
       transfersUsed: used,
       budgetGrants: grants,
       budgetLeft: left,
-      closesAt: open ? (w?.closesAt ?? null) : null,
+      watched: w?.watched ?? [],
+      allWatched: phase === 'mini' || phase === 'big' || phase === 'over' ? this.everyoneWatched(w, parts) : true,
       ready: open ? (w?.ready ?? []) : [],
       rosters: byTeam,
       captains: Object.fromEntries(parts.filter((p) => p.teamName !== null).map((p) => [p.id, p.captainPlayerId])),
@@ -265,6 +237,7 @@ export class RoundService {
     const { game, me } = await this.mine(code, userIn);
     const phase = phaseOf(game);
     if (phase !== 'mini' && phase !== 'big') throw conflict('window_closed', 'Transfers happen in the transfer windows');
+    await this.requireWatched(game);
     await this.applyTransfer(game, me, slotKey, playerId, phase);
     await writeAudit(this.database.db, this.database.t, { actor: actorOf(requireUser(userIn)), action: 'round.transfer', target: `game:${game.joinCode}`, gameId: game.id, details: { slotKey, playerId } });
     this.hub.resync(game.id);
@@ -316,6 +289,7 @@ export class RoundService {
   async proposeTrade(code: string, userIn: AuthUser | null, input: { toParticipantId: number; offerPlayerId: number; requestPlayerId: number }): Promise<TradeView> {
     const { game, me, parts } = await this.mine(code, userIn);
     this.requireTradePhase(game);
+    await this.requireWatched(game);
     const other = parts.find((p) => p.id === input.toParticipantId && p.teamName !== null);
     if (!other || other.id === me.id) throw badRequest('wrong_team', 'Choose another team to trade with');
     const { db, t } = this.database;
@@ -364,6 +338,7 @@ export class RoundService {
     }
     if (action === 'accept') {
       this.requireTradePhase(game);
+      await this.requireWatched(game);
       await this.executeTrade(game, trade);
     } else {
       await db
@@ -482,22 +457,65 @@ export class RoundService {
 
   // ---------- Windows ----------
 
-  async setReady(code: string, userIn: AuthUser | null, ready: boolean): Promise<void> {
-    const { game, me } = await this.mine(code, userIn);
-    const w = windowOf(game);
-    const phase = phaseOf(game);
-    if (!w || (phase !== 'mini' && phase !== 'big')) throw conflict('window_closed', 'No transfer window is open');
-    const set = new Set(w.ready);
-    if (ready) set.add(me.id);
-    else set.delete(me.id);
-    const next: WindowState = { ...w, ready: [...set] };
-    const { db, t } = this.database;
-    await db.update(t.games).set({ windowState: next }).where(eq(t.games.id, game.id));
-    this.hub.resync(game.id);
-    await this.maybeClose(game.id);
+  /**
+   * Window state is one JSON value, so changes to it for one game run one at a time (two players
+   * pressing a button together must not overwrite each other). The app runs as one instance.
+   */
+  private readonly windowLocks = new Map<number, Promise<unknown>>();
+  private async editWindow<T>(gameId: number, fn: () => Promise<T>): Promise<T> {
+    const prev = this.windowLocks.get(gameId) ?? Promise.resolve();
+    const run = prev.catch(() => undefined).then(fn);
+    this.windowLocks.set(gameId, run);
+    try {
+      return await run;
+    } finally {
+      if (this.windowLocks.get(gameId) === run) this.windowLocks.delete(gameId);
+    }
   }
 
-  /** Host closes the window even if some teams are not done. */
+  async setReady(code: string, userIn: AuthUser | null, ready: boolean): Promise<void> {
+    const { game: found, me } = await this.mine(code, userIn);
+    await this.editWindow(found.id, async () => {
+      const game = await this.getById(found.id);
+      const w = windowOf(game);
+      const phase = phaseOf(game);
+      if (!w || (phase !== 'mini' && phase !== 'big')) throw conflict('window_closed', 'No transfer window is open');
+      const parts = await this.partsOf(game.id);
+      if (!this.everyoneWatched(w, parts)) throw conflict('still_watching', 'The window opens once everyone has watched the matches');
+      const set = new Set(w.ready);
+      if (ready) set.add(me.id);
+      else set.delete(me.id);
+      const { db, t } = this.database;
+      await db.update(t.games).set({ windowState: { ...w, ready: [...set] } }).where(eq(t.games.id, game.id));
+    });
+    this.hub.resync(found.id);
+    await this.maybeClose(found.id);
+  }
+
+  /** A player's screen reached the break (or the end of the round): they are done watching. */
+  async markWatched(code: string, userIn: AuthUser | null): Promise<void> {
+    const { game: found, me } = await this.mine(code, userIn);
+    const changed = await this.editWindow(found.id, async () => {
+      const game = await this.getById(found.id);
+      const w = windowOf(game);
+      if (!w || game.status !== 'completed') return false;
+      if ((w.watched ?? []).includes(me.id)) return false;
+      const { db, t } = this.database;
+      await db.update(t.games).set({ windowState: { ...w, watched: [...(w.watched ?? []), me.id] } }).where(eq(t.games.id, game.id));
+      return true;
+    });
+    if (changed) this.hub.resync(found.id);
+  }
+
+  /** Someone came or went: who we wait for changed, so the window may now close. */
+  async connectionChanged(gameId: number): Promise<void> {
+    const game = await this.getById(gameId).catch(() => null);
+    if (!game || game.status !== 'completed' || !windowOf(game)) return;
+    this.hub.resync(gameId);
+    await this.maybeClose(gameId);
+  }
+
+  /** Admin (or host) closes the window even if some teams are not done, for a stuck game. */
   async close(code: string, userIn: AuthUser | null): Promise<void> {
     const game = await this.getByCode(code);
     const user = requireUser(userIn);
@@ -507,22 +525,38 @@ export class RoundService {
     await this.closer!.closeWindow(game.id, user);
   }
 
-  /** Closes the window once every human team is done (bots are done as soon as it opens). */
+  /**
+   * Closes the window once every connected human has watched the matches and pressed done (bots
+   * are done as soon as it opens), and at least one player has pressed done.
+   */
   private async maybeClose(gameId: number): Promise<void> {
     const game = await this.getById(gameId);
     const w = windowOf(game);
     const phase = phaseOf(game);
     if (!w || (phase !== 'mini' && phase !== 'big')) return;
+    const parts = await this.partsOf(gameId);
+    if (!this.everyoneWatched(w, parts)) return;
+    // Someone must have pressed done (bots are marked done when the window opens).
+    const humanDone = parts.some((p) => p.teamName !== null && !p.isBot && w.ready.includes(p.id));
+    if (humanDone && this.waitingOn(parts).every((p) => w.ready.includes(p.id))) await this.closer!.closeWindow(gameId, null).catch(() => undefined);
+  }
+
+  private async partsOf(gameId: number): Promise<ParticipantRow[]> {
     const { db, t } = this.database;
-    const parts = await db.select().from(t.participants).where(eq(t.participants.gameId, gameId));
-    const humans = parts.filter((p) => p.teamName !== null && !p.isBot);
-    if (humans.every((p) => w.ready.includes(p.id))) await this.closer!.closeWindow(gameId, null);
+    return db.select().from(t.participants).where(eq(t.participants.gameId, gameId));
+  }
+
+  /** Transfers and trades in a window wait until everyone has watched up to it. */
+  private async requireWatched(game: GameRow): Promise<void> {
+    const phase = phaseOf(game);
+    if (phase !== 'mini' && phase !== 'big') return;
+    if (!this.everyoneWatched(windowOf(game), await this.partsOf(game.id))) throw conflict('still_watching', 'The window opens once everyone has watched the matches');
   }
 
   /**
    * A window just opened. Every team gets its budget from the league points it has so far; bots
-   * are done at once (they shop when it closes, after the humans). The window closes by itself
-   * WINDOW_SECONDS after the playback reaches it.
+   * are done at once (they shop when it closes, after the humans). It closes when every player
+   * has pressed done.
    */
   async windowOpened(gameId: number): Promise<void> {
     const game = await this.getById(gameId);
@@ -536,12 +570,10 @@ export class RoundService {
     const points = await this.pointsSoFar(gameId, w.seasonNumber, phase === 'mini' ? HALF_SEASON_MATCHDAYS : SEASON_MATCHDAYS);
     const grants: Record<string, number> = {};
     for (const p of parts) if (p.teamName !== null) grants[String(p.id)] = windowBudget(phase, points.get(p.id) ?? 0);
-    const playback = game.playbackState as PlaybackState | null;
-    const toGo = playback ? Math.max(0, (playback.cap ?? SEASON_MATCHDAYS) - playback.matchday) : 0;
-    const playMs = playback?.playing ? (toGo * MATCHDAY_MS) / Math.max(playback.speed, 0.25) : 0;
-    const closesAt = new Date(Date.now() + playMs + WINDOW_SECONDS * 1000).toISOString();
-    await db.update(t.games).set({ windowState: { ...w, ready, grants, closesAt } }).where(eq(t.games.id, gameId));
-    this.scheduleClose(gameId, closesAt);
+    await this.editWindow(gameId, async () => {
+      const fresh = windowOf(await this.getById(gameId)) ?? w;
+      await db.update(t.games).set({ windowState: { ...fresh, ready: [...new Set([...fresh.ready, ...ready])], grants } }).where(eq(t.games.id, gameId));
+    });
     this.hub.resync(gameId);
   }
 

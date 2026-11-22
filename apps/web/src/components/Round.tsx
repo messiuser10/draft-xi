@@ -21,7 +21,6 @@ import { useAction } from '../lib/actions';
 import { api } from '../lib/api';
 import { type PoolData, positionsOf, TierBadge, toEngine } from '../lib/pool';
 import { useRematch, useToasts } from '../lib/socket';
-import { useSecondsLeft } from './Countdown';
 import { TeamBadge } from './TeamBadge';
 
 type Round = NonNullable<GameSnapshot['round']>;
@@ -338,17 +337,6 @@ function Trades({ snapshot, pool, round, me }: { snapshot: GameSnapshot; pool: P
 
 // ---------- Transfer window ----------
 
-function WindowClock({ closesAt }: { closesAt: string | null }) {
-  const secs = useSecondsLeft(closesAt);
-  if (secs === null) return null;
-  const urgent = secs <= 30;
-  return (
-    <p className={`display text-2xl tabular-nums ${urgent ? 'text-red-500' : ''}`} role="timer" aria-label={`${secs} seconds until the window closes`}>
-      ⏱ {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}
-    </p>
-  );
-}
-
 export function TransferWindow({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData }) {
   const round = snapshot.round!;
   const { run, busy } = useAction();
@@ -357,7 +345,7 @@ export function TransferWindow({ snapshot, pool }: { snapshot: GameSnapshot; poo
   const me = snapshot.participants.find((p) => p.id === snapshot.me.participantId && p.teamName !== null);
   const ready = me ? round.ready.includes(me.id) : false;
   const humans = snapshot.participants.filter((p) => p.teamName !== null && !p.isBot);
-  const waiting = humans.filter((p) => !round.ready.includes(p.id));
+  const waiting = humans.filter((p) => p.isConnected && !round.ready.includes(p.id));
   const name = (id: number) => snapshot.participants.find((p) => p.id === id)?.teamName ?? 'A team';
   const moves = round.moves.filter((m) => m.windowKind === round.phase && m.seasonNumber === round.seasonNumber && m.kind === 'transfer');
   return (
@@ -369,19 +357,18 @@ export function TransferWindow({ snapshot, pool }: { snapshot: GameSnapshot; poo
             🔁 {WINDOW_TITLE[round.phase]}
           </h2>
           <p className="text-sm text-slate-500">
-            {round.transferLimit} transfers per team (sell a player, buy a free one with your budget), plus as many trades as you agree. {waiting.length > 0 ? `Waiting for ${waiting.map((p) => p.teamName).join(', ')}.` : 'Everyone is done.'}
+            {round.transferLimit} transfers per team (sell a player, buy a free one with your budget), plus as many trades as you agree. It closes when every player has pressed I'm done. {waiting.length > 0 ? `Waiting for ${waiting.map((p) => p.teamName).join(', ')}.` : 'Everyone is done.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <WindowClock closesAt={round.closesAt} />
           {me ? (
             <button type="button" className={ready ? 'btn-secondary' : 'btn-primary'} disabled={busy} onClick={() => void run(`/api/games/${code}/window/ready`, 'POST', { ready: !ready })}>
               {ready ? 'Not done yet' : "I'm done ✓"}
             </button>
           ) : null}
-          {snapshot.me.isHost || snapshot.me.isAdmin ? (
+          {snapshot.me.isAdmin ? (
             <button type="button" className="btn-secondary" disabled={busy} onClick={() => void run(`/api/games/${code}/window/close`)}>
-              {busy ? 'Simulating…' : 'Close window & play on'}
+              {busy ? 'Simulating…' : 'Admin: force close'}
             </button>
           ) : null}
         </div>
@@ -521,37 +508,47 @@ export function RoundOver({ snapshot }: { snapshot: GameSnapshot }) {
 
 export function SeasonLeaders({ season, title = 'Season stats' }: { season: SeasonView; title?: string }) {
   const teams = new Map(season.teams.map((t) => [t.id, t]));
-  const top = (key: 'goals' | 'assists' | 'cleanSheets' | 'avgRating', min = 0) =>
+  const top = (key: 'goals' | 'assists') =>
     [...season.playerStats]
-      .filter((s) => (key === 'avgRating' ? s.appearances >= 10 : s[key] > min))
+      .filter((s) => s[key] > 0)
       .sort((a, b) => b[key] - a[key] || b.appearances - a.appearances)
-      .slice(0, 5);
-  const boards: { label: string; icon: string; rows: ReturnType<typeof top>; value: (s: SeasonView['playerStats'][number]) => string }[] = [
-    { label: 'Most goals', icon: '⚽', rows: top('goals'), value: (s) => String(s.goals) },
-    { label: 'Most assists', icon: '🅰️', rows: top('assists'), value: (s) => String(s.assists) },
-    { label: 'Clean sheets', icon: '🧤', rows: top('cleanSheets'), value: (s) => String(s.cleanSheets) },
-    { label: 'Best rating', icon: '⭐', rows: top('avgRating'), value: (s) => s.avgRating.toFixed(2) },
+      .slice(0, 5)
+      .map((s) => ({ key: `${s.playerId}-${s.teamId}`, name: s.name, team: teams.get(s.teamId), value: s[key] }));
+  // Clean sheets belong to the whole team: matches it played without conceding.
+  const sheets = new Map<string, number>();
+  for (const f of season.fixtures) {
+    if (f.awayGoals === 0) sheets.set(f.homeTeamId, (sheets.get(f.homeTeamId) ?? 0) + 1);
+    if (f.homeGoals === 0) sheets.set(f.awayTeamId, (sheets.get(f.awayTeamId) ?? 0) + 1);
+  }
+  const cleanSheets = [...sheets.entries()]
+    .sort((a, b) => b[1] - a[1] || (teams.get(a[0])?.name ?? '').localeCompare(teams.get(b[0])?.name ?? ''))
+    .slice(0, 5)
+    .map(([teamId, n]) => ({ key: teamId, name: teams.get(teamId)?.name ?? 'Team', team: undefined, value: n }));
+  const boards: { label: string; icon: string; rows: { key: string; name: string; team: LeagueTeamView | undefined; value: number }[] }[] = [
+    { label: 'Most goals', icon: '⚽', rows: top('goals') },
+    { label: 'Most assists', icon: '🅰️', rows: top('assists') },
+    { label: 'Clean sheets', icon: '🧤', rows: cleanSheets },
   ];
   return (
     <section className="card animate-reveal p-4" aria-labelledby="leaders-title">
       <h2 id="leaders-title" className="display text-2xl">
         📊 {title}
       </h2>
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {boards.map((b) => (
-          <div key={b.label} className="rounded-xl bg-slate-100 p-3 dark:bg-night-900">
+          <div key={b.label} className="min-w-0 rounded-xl bg-slate-100 p-3 dark:bg-night-900">
             <h3 className="font-bold">
               {b.icon} {b.label}
             </h3>
-            <ol className="mt-2 grid gap-1 text-sm">
-              {b.rows.map((s, i) => (
-                <li key={`${s.playerId}-${s.teamId}`} className={`flex items-center gap-2 ${i === 0 ? 'font-semibold' : ''}`}>
+            <ol className="mt-2 grid grid-cols-1 gap-1 text-sm">
+              {b.rows.map((r, i) => (
+                <li key={r.key} className={`flex items-center gap-2 ${i === 0 ? 'font-semibold' : ''}`}>
                   <span className="w-4 text-xs text-slate-500">{i + 1}</span>
                   <span className="min-w-0 flex-1 truncate">
-                    {s.name}
-                    <TeamTag team={teams.get(s.teamId)} />
+                    {r.name}
+                    <TeamTag team={r.team} />
                   </span>
-                  <span className="tabular-nums">{b.value(s)}</span>
+                  <span className="tabular-nums">{r.value}</span>
                 </li>
               ))}
               {b.rows.length === 0 ? <li className="text-slate-500">Nobody yet</li> : null}

@@ -132,15 +132,6 @@ export function SettingsFields({ value, onChange, site, disabled }: Props) {
           ))}
         </select>
       </div>
-      <div>
-        <label className="label" htmlFor="playback">
-          Season playback
-        </label>
-        <select id="playback" className="input" disabled={disabled} value={value.playbackMode} onChange={(e) => set({ playbackMode: e.target.value as GameSettings['playbackMode'] })}>
-          <option value="synchronized">Synchronized (everyone together)</option>
-          <option value="own_pace">Own pace</option>
-        </select>
-      </div>
       <Toggle
         label={value.draftMode === 'pack' ? 'Club spin (not used with Pack pick)' : 'Club spin: a wheel picks the club for every pick'}
         checked={value.clubSpin}

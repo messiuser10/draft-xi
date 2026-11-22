@@ -62,6 +62,8 @@ const SETTINGS = {
       points: z.object({ win: z.number(), draw: z.number(), loss: z.number() }),
       // Optional so settings saved before tiebreakers existed stay valid.
       tiebreakers: z.array(z.enum(TIEBREAK_KEYS)).max(TIEBREAK_KEYS.length).optional(),
+      // Optional: settings saved before it existed use the engine default.
+      aiSpread: z.number().min(0).max(1).optional(),
     }),
     default: DEFAULT_SIM_PARAMS,
   },

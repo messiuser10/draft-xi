@@ -86,7 +86,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   strictPositions: true,
   removeDraftedFromAi: true,
   botsAllowed: true,
-  playbackMode: 'synchronized',
+  playbackMode: 'own_pace',
   disconnectPolicy: 'autopick',
 };
 
@@ -191,8 +191,6 @@ export function playbackMatchday(state: PlaybackState, nowMs: number): number {
 export const ROUND_SEASONS = 2;
 /** Transfers (buy one, sell the one in that slot) each team may make per window. Trades are unlimited. */
 export const TRANSFER_LIMITS = { mini: 2, big: 4 } as const;
-/** How long a transfer window stays open once its matchday is reached. */
-export const WINDOW_SECONDS = 180;
 /**
  * Window budget, in millions: a base plus half a million per league point won so far (the first
  * half of the season for the mid-season window, the whole season for the summer one).
@@ -569,8 +567,10 @@ export interface RoundView {
   budgetGrants: Record<number, number>;
   /** Money each team has left in the open window: grant plus sales minus purchases. */
   budgetLeft: Record<number, number>;
-  /** When the open window closes by itself (null when none is open). */
-  closesAt: string | null;
+  /** Teams whose player has watched the matches up to this break (or the end of the round). */
+  watched: number[];
+  /** Every connected player has watched up to the break: the window (or round-over screen) is open. */
+  allWatched: boolean;
   /** Teams that marked themselves done in the open window. */
   ready: number[];
   /** Each team's current XI, by slot. */
@@ -942,6 +942,7 @@ export const labRunSchema = z.object({
       homeAdvantage: z.number().positive().max(3),
       sensitivity: z.number().min(0).max(1),
       chaos: z.number().min(0).max(1),
+      aiSpread: z.number().min(0).max(1),
       outOfPositionPenalty: z.number().min(0).max(40),
       reserveRating: z.number().int().min(40).max(99),
       chemistry: z.boolean(),

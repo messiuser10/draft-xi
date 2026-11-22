@@ -9,6 +9,7 @@ const PARAMS = [
   ['homeAdvantage', 'Home advantage', 0.01],
   ['sensitivity', 'Sensitivity', 0.01],
   ['chaos', 'Chaos', 0.05],
+  ['aiSpread', 'AI spread', 0.05],
 ] as const;
 
 export function AdminLabPage() {
