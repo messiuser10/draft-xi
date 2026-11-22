@@ -13,7 +13,7 @@ Unofficial fan game, not affiliated with any club, league or player.
 | M0 | Monorepo, TypeScript, lint, tests, database schema and migrations, seed and data validation | Done |
 | M1 | Engine: formations, ratings, AI lineups, fixtures, match and season simulation, Monte Carlo, awards, draft grades, `npm run sim` | Done |
 | M2 | Server foundation: accounts, guests, admin roles, lobby, host controls, Socket.IO, start-game flow; web app with home, sign-in, create, lobby and kickoff | Done |
-| M3 | Draft room: snake, linear and Pack Pick modes, pick validation in transactions, server timers, auto-pick, queue, bots, host controls, disconnect handling, Team Reveal | Done |
+| M3 | Draft room: snake, linear and Pack Pick modes, player list of only draftable players with a Draft button (asks the position when several fit), pick validation in transactions, server timers, auto-pick, queue, bots, host controls, disconnect handling, Team Reveal | Done |
 | M4 | Season: stored simulation, synchronized or own-pace playback, matchday results, live table, match ticker, key moments, League Teams, Run It Back, multi-season, Expected Strength (Monte Carlo) | Done |
 | M5 | Results: awards, draft grades and pick tags, team pages, head to head, share text and image, export, rematch, profiles, Hall of Fame, leaderboard, record book | Done |
 | M6 | Admin panel: overview and data health, players (search, inline and bulk edit, import and export with diff preview, duplicates, rebalance), clubs (colours, pool, strength override, custom clubs, AI preview), games, settings, Simulation Lab and Test Draft, users, audit log, announcements | Done |

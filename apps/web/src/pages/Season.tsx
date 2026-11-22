@@ -548,7 +548,7 @@ function Ticker({ fixture, teams, onClose }: { fixture: FixtureView; teams: Map<
           </div>
         </div>
         <p className="mt-1 text-center text-xs text-slate-500">{minute >= 94 ? 'Full time' : `${minute}'`}</p>
-        <ol className="mt-3 grid max-h-80 gap-1 overflow-y-auto text-sm" aria-live="polite">
+        <ol className="mt-3 grid max-h-80 grid-cols-1 gap-1 overflow-y-auto text-sm" aria-live="polite">
           {events.map((e, i) => (
             <li key={i} className={`flex gap-2 ${e.teamId === fixture.awayTeamId ? 'flex-row-reverse text-right' : ''}`}>
               <span className="w-8 shrink-0 text-xs tabular-nums text-slate-500">{e.minute}'</span>

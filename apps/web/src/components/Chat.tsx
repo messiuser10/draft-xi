@@ -14,7 +14,7 @@ export function Chat({ snapshot, bare = false }: { snapshot: GameSnapshot; bare?
   return (
     <section className={bare ? '' : 'card p-5'}>
       {bare ? null : <h2 className="display text-xl">Chat</h2>}
-      <ul className="mt-3 grid max-h-60 gap-1 overflow-y-auto text-sm" aria-live="polite">
+      <ul className="mt-3 grid max-h-60 grid-cols-1 gap-1 overflow-y-auto text-sm" aria-live="polite">
         {chat.length === 0 ? <li className="text-slate-500">No messages yet. Say hello.</li> : null}
         {chat.map((m) => (
           <li key={m.id}>

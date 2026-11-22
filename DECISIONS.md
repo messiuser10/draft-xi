@@ -190,3 +190,6 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - Club spin plays full-screen over the draft room (dark backdrop, large reel, club name in big letters), then stays as a compact card with the re-spin button; tap Continue, tap the backdrop or press Escape to close it early.
 - The spin reel starts on a short timer rather than requestAnimationFrame, which pauses in background tabs.
 - Layout is checked at 375 (phone), 768 (tablet) and 1280 (laptop) wide: no page may scroll sideways or push content past its card; lists inside cards use `grid-cols-1` so long rows shrink instead of overflowing.
+- Draft room player list shows only players you can draft (not taken, and fitting one of your open slots); the "Hide drafted" and "Fits my open slots" toggles are gone. Spectators still see every undrafted player.
+- Every listed player has a green Draft button (disabled until your turn). If he fits exactly one open slot (or the slot you tapped), it drafts at once; if he fits several, it asks where he should play.
+- Lists inside a grid use `grid-cols-1`: an implicit grid column grows to its widest line, which on phones made the browser zoom the whole page out.

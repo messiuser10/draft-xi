@@ -205,7 +205,7 @@ function DraftRoom({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData 
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
-        <div className="grid content-start gap-4">
+        <div className="grid min-w-0 grid-cols-1 content-start gap-4">
           {viewed ? (
             <MyTeamCard
               state={viewed}
@@ -224,7 +224,7 @@ function DraftRoom({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData 
           ) : null}
         </div>
 
-        <div className="grid min-w-0 content-start gap-4">
+        <div className="grid min-w-0 grid-cols-1 content-start gap-4">
           {settings.draftMode === 'pack' && myTurn && mine ? (
             <PackPanel snapshot={snapshot} pool={pool} mine={mine} busy={busy} onPick={doPick} />
           ) : null}
@@ -427,8 +427,8 @@ function PoolPanel({
   const [nationality, setNationality] = useState('');
   const [minOvr, setMinOvr] = useState(40);
   const [maxOvr, setMaxOvr] = useState(99);
-  const [fitsOnly, setFitsOnly] = useState(false);
-  const [hideTaken, setHideTaken] = useState(false);
+  // Which player's "where should he play?" chooser is open.
+  const [choosing, setChoosing] = useState<number | null>(null);
   const [sort, setSort] = useState<SortKey>('overall');
   const [limit, setLimit] = useState(60);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -441,7 +441,6 @@ function PoolPanel({
   }
   const pickAndClose = (playerId: number, slotKey: string) => void onPick(playerId, slotKey).then(() => setSheetOpen(false));
   const queue = snapshot.draft?.myQueue ?? [];
-  const teamById = new Map(snapshot.participants.map((p) => [p.id, p]));
   const nationalities = useMemo(() => [...new Set(pool.players.map((p) => p.nationality))].sort(), [pool]);
   const slotType = activeSlot && mine ? getFormation(mine.formation).slots.find((s) => s.key === activeSlot)?.type : undefined;
 
@@ -455,9 +454,10 @@ function PoolPanel({
         if (position && !positionsOf(p).includes(position as never)) return false;
         if (nationality && p.nationality !== nationality) return false;
         if (p.overall < minOvr || p.overall > maxOvr) return false;
-        if (hideTaken && takenBy.has(p.id)) return false;
+        // Only players you could actually draft: not taken, and fitting one of your open slots.
+        if (takenBy.has(p.id)) return false;
         if (slotType && !fitsSlot(toEngine(p), slotType)) return false;
-        if (fitsOnly && mine && fittingKeys(p, mine).length === 0) return false;
+        if (mine && fittingKeys(p, mine).length === 0) return false;
         return true;
       })
       .sort((a, b) => {
@@ -465,7 +465,7 @@ function PoolPanel({
         if (sort === 'club') return (pool.clubsById.get(a.clubId)?.name ?? '').localeCompare(pool.clubsById.get(b.clubId)?.name ?? '') || b.overall - a.overall;
         return b.overall - a.overall || a.name.localeCompare(b.name);
       });
-  }, [pool, q, club, position, nationality, minOvr, maxOvr, hideTaken, slotType, fitsOnly, mine, sort, takenBy, spinClubId]);
+  }, [pool, q, club, position, nationality, minOvr, maxOvr, slotType, mine, sort, takenBy, spinClubId]);
   const spunName = spinClubId === null ? null : (pool.clubsById.get(spinClubId)?.name ?? 'the spun club');
 
   const toggleQueue = async (id: number) => {
@@ -577,58 +577,64 @@ function PoolPanel({
             <option value="club">Sort: club</option>
           </select>
         </label>
-        <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-4">
-          {mine ? (
-            <Chip on={fitsOnly} onClick={() => setFitsOnly((v) => !v)}>
-              Fits my open slots
-            </Chip>
-          ) : null}
-          <Chip on={hideTaken} onClick={() => setHideTaken((v) => !v)}>
-            Hide drafted
-          </Chip>
-        </div>
       </div>
 
       <ul className="mt-3 grid max-h-[32rem] min-h-0 grid-cols-1 content-start gap-1 overflow-y-auto pr-1 max-lg:max-h-none max-lg:flex-1" onKeyDown={onKeys} aria-label="Players">
-        {list.length === 0 ? <li className="p-6 text-center text-sm text-slate-500">No players match these filters.</li> : null}
+        {list.length === 0 ? <li className="p-6 text-center text-sm text-slate-500">{mine ? 'No available player fits your open slots with these filters.' : 'No players match these filters.'}</li> : null}
         {list.slice(0, limit).map((p) => {
-          const taker = takenBy.get(p.id);
-          const takerTeam = taker !== undefined ? teamById.get(taker) : undefined;
-          const fits = mine && taker === undefined ? fittingKeys(p, mine) : [];
+          const fits = mine ? fittingKeys(p, mine) : [];
+          // Filling a chosen slot, or only one slot fits: draft straight away. Otherwise ask where he plays.
           const quickSlot = activeSlot && fits.includes(activeSlot) ? activeSlot : fits.length === 1 ? fits[0] : undefined;
           const clubRow = pool.clubsById.get(p.clubId);
+          const slotTypeOf = (key: string) => (mine ? getFormation(mine.formation).slots.find((s) => s.key === key)?.type : undefined) ?? key;
           return (
-            <li key={p.id} className={`flex items-center gap-2 rounded-xl px-2 py-1.5 ${taker !== undefined ? 'opacity-45' : 'hover:bg-slate-100 dark:hover:bg-night-900'}`}>
+            <li key={p.id} className="grid grid-cols-1 rounded-xl px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-night-900">
+              <div className="flex min-w-0 items-center gap-2">
               <button type="button" data-row className="flex min-w-0 flex-1 items-center gap-2 text-left focus-visible:outline-2 focus-visible:outline-pitch-400 rounded-lg" onClick={() => onSelect(p.id)}>
                 <span className="grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold" style={{ backgroundColor: clubRow?.primaryColor ?? '#334155', color: textOn(clubRow?.primaryColor ?? '#334155'), boxShadow: `inset 0 0 0 2px ${clubRow?.secondaryColor ?? '#fff'}` }} aria-hidden>
                   {initialsOf(p.name)}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className={`block truncate font-semibold ${taker !== undefined ? 'line-through' : ''}`}>{p.name}</span>
+                  <span className="block truncate font-semibold">{p.name}</span>
                   <span className="block truncate text-xs text-slate-500">
                     {positionsOf(p).join(', ')} · {clubRow?.shortName ?? ''} · {p.nationality}
                   </span>
                 </span>
                 <TierBadge overall={p.overall} />
               </button>
-              {takerTeam ? (
-                <span className="shrink-0 rounded bg-slate-200 px-1.5 text-[10px] font-bold dark:bg-night-700" title={`Drafted by ${takerTeam.teamName}`}>
-                  {takerTeam.monogram}
-                </span>
-              ) : (
+              {mine ? (
                 <>
-                  {mine ? (
-                    <button type="button" className={`grid size-9 shrink-0 place-items-center rounded-lg text-lg ${queue.includes(p.id) ? 'text-gold-500' : 'text-slate-400'}`} onClick={() => void toggleQueue(p.id)} aria-label={queue.includes(p.id) ? `Remove ${p.name} from queue` : `Add ${p.name} to queue`} aria-pressed={queue.includes(p.id)}>
-                      ★
-                    </button>
-                  ) : null}
-                  {myTurn && quickSlot ? (
-                    <button type="button" className="btn-primary min-h-9 shrink-0 px-3 text-sm" disabled={busy} onClick={() => pickAndClose(p.id, quickSlot)}>
-                      Draft {quickSlot}
-                    </button>
-                  ) : null}
+                  <button type="button" className={`grid size-9 shrink-0 place-items-center rounded-lg text-lg ${queue.includes(p.id) ? 'text-gold-500' : 'text-slate-400'}`} onClick={() => void toggleQueue(p.id)} aria-label={queue.includes(p.id) ? `Remove ${p.name} from queue` : `Add ${p.name} to queue`} aria-pressed={queue.includes(p.id)}>
+                    ★
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary min-h-9 shrink-0 px-3 text-sm"
+                    disabled={busy || !myTurn}
+                    title={myTurn ? undefined : 'Wait for your turn'}
+                    aria-expanded={quickSlot ? undefined : choosing === p.id}
+                    onClick={() => (quickSlot ? pickAndClose(p.id, quickSlot) : setChoosing(choosing === p.id ? null : p.id))}
+                  >
+                    Draft
+                  </button>
                 </>
-              )}
+              ) : null}
+              </div>
+              {myTurn && choosing === p.id && !quickSlot ? (
+                <div className="mt-2 rounded-xl bg-pitch-500/10 p-2 ring-1 ring-pitch-500/40" role="group" aria-label={`Where should ${p.name} play?`}>
+                  <p className="text-sm font-semibold">Where should {p.name} play?</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {fits.map((key) => (
+                      <button key={key} type="button" className="btn-primary min-h-10 px-3 text-sm" disabled={busy} onClick={() => pickAndClose(p.id, key)}>
+                        {key === slotTypeOf(key) ? key : `${key} (${slotTypeOf(key)})`}
+                      </button>
+                    ))}
+                    <button type="button" className="btn-ghost min-h-10 px-3 text-sm" onClick={() => setChoosing(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </li>
           );
         })}
@@ -758,11 +764,11 @@ function Rivals({ snapshot, pool, teams }: { snapshot: GameSnapshot; pool: PoolD
 }
 
 function Activity({ snapshot, pool }: { snapshot: GameSnapshot; pool: PoolData }) {
-  const picks = [...(snapshot.draft?.picks ?? [])].reverse();
   const teamById = new Map(snapshot.participants.map((p) => [p.id, p]));
+  const picks = [...(snapshot.draft?.picks ?? [])].reverse();
   if (picks.length === 0) return <p className="text-sm text-slate-500">No picks yet. The first one is coming up.</p>;
   return (
-    <ol className="grid max-h-80 gap-1 overflow-y-auto text-sm" aria-live="polite">
+    <ol className="grid max-h-80 grid-cols-1 gap-1 overflow-y-auto text-sm" aria-live="polite">
       {picks.map((p, i) => {
         const team = teamById.get(p.participantId);
         const player = pool.playersById.get(p.playerId);
