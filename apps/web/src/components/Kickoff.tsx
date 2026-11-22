@@ -9,11 +9,13 @@ export function badgeText(short: string): string {
   return words.length > 1 ? words.map((w) => w[0]).join('').slice(0, 3) : short.slice(0, 3);
 }
 
-export function ClubShield({ primary, secondary, text, size = 'md' }: { primary: string; secondary: string; text: string; size?: 'sm' | 'md' }) {
+const SHIELD_SIZE = { sm: 'size-7 text-[9px]', md: 'size-8 text-[10px]', lg: 'size-14 text-sm', xl: 'size-24 text-xl sm:size-32 sm:text-2xl' } as const;
+
+export function ClubShield({ primary, secondary, text, size = 'md' }: { primary: string; secondary: string; text: string; size?: keyof typeof SHIELD_SIZE }) {
   return (
     <span
-      className={`grid shrink-0 place-items-center rounded-full display ${size === 'sm' ? 'size-7 text-[9px]' : 'size-8 text-[10px]'}`}
-      style={{ backgroundColor: primary, color: textOn(primary), boxShadow: `inset 0 0 0 3px ${secondary}` }}
+      className={`grid shrink-0 place-items-center rounded-full display ${SHIELD_SIZE[size]}`}
+      style={{ backgroundColor: primary, color: textOn(primary), boxShadow: `inset 0 0 0 ${size === 'xl' ? 6 : size === 'lg' ? 4 : 3}px ${secondary}` }}
       aria-hidden
     >
       {badgeText(text)}

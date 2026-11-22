@@ -113,10 +113,10 @@ function Participants({ snapshot }: { snapshot: GameSnapshot }) {
             <span className="w-5 text-center text-sm tabular-nums text-slate-500">{i + 1}</span>
             <TeamBadge color={p.color} monogram={p.monogram} />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold">
-                {p.teamName}
-                {p.isHost ? <span title="Host" aria-label="Host" className="ml-1 text-gold-500">♛</span> : null}
-                {p.id === me.participantId ? <span className="ml-2 text-xs text-pitch-500">you</span> : null}
+              <p className="flex min-w-0 items-baseline font-semibold">
+                <span className="truncate">{p.teamName}</span>
+                {p.isHost ? <span title="Host" aria-label="Host" className="ml-1 shrink-0 text-gold-500">♛</span> : null}
+                {p.id === me.participantId ? <span className="ml-2 shrink-0 text-xs text-pitch-500">you</span> : null}
               </p>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                 {p.displayName} · {p.formation ?? 'no formation'}

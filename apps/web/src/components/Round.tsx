@@ -78,7 +78,7 @@ function MyXI({
   const left = Math.max(0, round.transferLimit - used);
   const budget = round.budgetLeft[me.id] ?? 0;
   return (
-    <section className="card p-4">
+    <section className="card p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline gap-x-2">
         <h3 className="display text-xl">Your XI</h3>
         <p className="text-sm text-slate-500">
@@ -91,21 +91,23 @@ function MyXI({
           💰 <strong>{money(budget)}</strong> to spend <span className="text-slate-500">(got {money(round.budgetGrants[me.id] ?? 0)} for your league points; selling a player adds his value)</span>
         </p>
       ) : null}
-      <ul className="mt-3 grid gap-1">
+      <ul className="mt-3 grid grid-cols-1 gap-1">
         {slotsOf(me).map((slot) => {
           const id = roster[slot.key];
           const player = id === undefined ? undefined : pool.playersById.get(id);
           const isCaptain = id !== undefined && id === captain;
           return (
             <li key={slot.key} className="rounded-xl bg-slate-100 px-2 py-1.5 dark:bg-night-900">
-              <div className="flex items-center gap-2">
-                <span className="w-10 text-xs font-bold text-slate-500">{slot.key}</span>
-                <span className="min-w-0 flex-1 truncate font-semibold">{player?.name ?? '—'}</span>
-                {player && canTransfer ? <span className="text-xs text-slate-500">{money(playerValue(player.overall))}</span> : null}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="w-8 shrink-0 text-xs font-bold text-slate-500 sm:w-10">{slot.key}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold">{player?.name ?? '—'}</span>
+                  {player && canTransfer ? <span className="block text-xs text-slate-500">Worth {money(playerValue(player.overall))}</span> : null}
+                </span>
                 {player ? <TierBadge overall={player.overall} /> : null}
                 <button
                   type="button"
-                  className={`min-h-9 rounded-lg px-2 text-sm font-bold ${isCaptain ? 'bg-gold-400 text-night-950' : 'bg-slate-200 text-slate-500 dark:bg-night-700'}`}
+                  className={`min-h-9 shrink-0 rounded-lg px-2 text-sm font-bold ${isCaptain ? 'bg-gold-400 text-night-950' : 'bg-slate-200 text-slate-500 dark:bg-night-700'}`}
                   aria-pressed={isCaptain}
                   aria-label={isCaptain ? `${player?.name ?? 'Player'} is captain` : `Make ${player?.name ?? 'player'} captain`}
                   disabled={busy || isCaptain || id === undefined}
@@ -114,7 +116,7 @@ function MyXI({
                   {isCaptain ? '⭐ C' : 'C'}
                 </button>
                 {canTransfer ? (
-                  <button type="button" className="btn-ghost min-h-9 px-2 text-sm" disabled={left === 0 && signing !== slot.key} onClick={() => setSigning(signing === slot.key ? null : slot.key)}>
+                  <button type="button" className="btn-ghost min-h-9 shrink-0 px-2 text-sm" disabled={left === 0 && signing !== slot.key} onClick={() => setSigning(signing === slot.key ? null : slot.key)}>
                     {signing === slot.key ? 'Close' : 'Replace'}
                   </button>
                 ) : null}
@@ -174,17 +176,18 @@ function SignPlayer({
         Free players who can play {slotType}. {current ? `Selling ${current.name} brings in ${money(playerValue(current.overall))}, so you can spend up to ${money(spend)}.` : ''}
       </p>
       <input className="input mt-1 min-h-9 w-full py-1" placeholder="Search players" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search free players" />
-      <ul className="mt-2 grid max-h-64 gap-1 overflow-y-auto">
+      <ul className="mt-2 grid max-h-64 grid-cols-1 gap-1 overflow-y-auto">
         {options.map((p) => (
           <li key={p.id} className="flex items-center gap-2 text-sm">
-            <span className="min-w-0 flex-1 truncate">
-              {p.name} <span className="text-xs text-slate-500">{pool.clubsById.get(p.clubId)?.shortName}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate">{p.name}</span>
+              <span className="block truncate text-xs text-slate-500">{pool.clubsById.get(p.clubId)?.shortName}</span>
             </span>
             <span className={`text-xs font-semibold ${playerValue(p.overall) <= spend ? '' : 'text-red-500'}`}>{money(playerValue(p.overall))}</span>
             <TierBadge overall={p.overall} />
             <button
               type="button"
-              className="btn-primary min-h-8 px-2 py-0 text-xs"
+              className="btn-primary min-h-9 shrink-0 px-3 py-0 text-xs"
               disabled={busy || playerValue(p.overall) > spend}
               title={playerValue(p.overall) > spend ? 'Too expensive' : undefined}
               onClick={() => void onSign(p.id)}
@@ -228,7 +231,7 @@ function Trades({ snapshot, pool, round, me }: { snapshot: GameSnapshot; pool: P
   };
 
   return (
-    <section className="card p-4">
+    <section className="card p-3 sm:p-4">
       <h3 className="display text-xl">Trades</h3>
       <p className="text-sm text-slate-500">Swap one player for one with another team. No money changes hands and it does not use a transfer. Both teams must agree, and each player must be able to play the other's slot so both formations stay valid.</p>
       {teams.length === 0 ? (
@@ -358,28 +361,30 @@ export function TransferWindow({ snapshot, pool }: { snapshot: GameSnapshot; poo
   const name = (id: number) => snapshot.participants.find((p) => p.id === id)?.teamName ?? 'A team';
   const moves = round.moves.filter((m) => m.windowKind === round.phase && m.seasonNumber === round.seasonNumber && m.kind === 'transfer');
   return (
-    <section className="card animate-reveal p-4 ring-2 ring-gold-400" id="window" aria-labelledby="window-title">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-0 flex-1">
+    <section className="card animate-reveal p-3 ring-2 ring-gold-400 sm:p-4" id="window" aria-labelledby="window-title">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="min-w-0 sm:flex-1">
           <p className="display text-gold-500">{round.phase === 'mini' ? `Season ${round.seasonNumber} · after matchday 19` : 'Between season 1 and season 2'}</p>
-          <h2 id="window-title" className="display text-3xl">
+          <h2 id="window-title" className="display text-2xl sm:text-3xl">
             🔁 {WINDOW_TITLE[round.phase]}
           </h2>
           <p className="text-sm text-slate-500">
             {round.transferLimit} transfers per team (sell a player, buy a free one with your budget), plus as many trades as you agree. {waiting.length > 0 ? `Waiting for ${waiting.map((p) => p.teamName).join(', ')}.` : 'Everyone is done.'}
           </p>
         </div>
-        <WindowClock closesAt={round.closesAt} />
-        {me ? (
-          <button type="button" className={ready ? 'btn-secondary' : 'btn-primary'} disabled={busy} onClick={() => void run(`/api/games/${code}/window/ready`, 'POST', { ready: !ready })}>
-            {ready ? 'Not done yet' : "I'm done ✓"}
-          </button>
-        ) : null}
-        {snapshot.me.isHost || snapshot.me.isAdmin ? (
-          <button type="button" className="btn-secondary" disabled={busy} onClick={() => void run(`/api/games/${code}/window/close`)}>
-            {busy ? 'Simulating…' : 'Close window & play on'}
-          </button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <WindowClock closesAt={round.closesAt} />
+          {me ? (
+            <button type="button" className={ready ? 'btn-secondary' : 'btn-primary'} disabled={busy} onClick={() => void run(`/api/games/${code}/window/ready`, 'POST', { ready: !ready })}>
+              {ready ? 'Not done yet' : "I'm done ✓"}
+            </button>
+          ) : null}
+          {snapshot.me.isHost || snapshot.me.isAdmin ? (
+            <button type="button" className="btn-secondary" disabled={busy} onClick={() => void run(`/api/games/${code}/window/close`)}>
+              {busy ? 'Simulating…' : 'Close window & play on'}
+            </button>
+          ) : null}
+        </div>
       </div>
       <div className="mt-4">
         <SquadManager snapshot={snapshot} pool={pool} round={round} />

@@ -105,7 +105,7 @@ export function Layout() {
       </main>
       <Walkthrough />
 
-      <footer className="border-t border-slate-200 px-4 py-6 text-center text-xs text-slate-500 dark:border-white/5 dark:text-slate-400">
+      <footer className={`border-t border-slate-200 px-4 py-6 text-center text-xs text-slate-500 dark:border-white/5 dark:text-slate-400 ${pathname.startsWith('/draft/') ? 'max-lg:pb-28' : ''}`}>
         <nav className="mb-3 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm" aria-label="Footer">
           <Link to="/how-to-play" className="hover:underline">How to play</Link>
           <Link to="/hall-of-fame" className="hover:underline">Hall of Fame</Link>

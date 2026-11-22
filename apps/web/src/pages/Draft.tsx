@@ -489,7 +489,7 @@ function PoolPanel({
     <>
     <button
       type="button"
-      className={`btn-primary fixed inset-x-4 bottom-4 z-30 shadow-2xl lg:hidden ${sheetOpen ? 'hidden' : ''} ${myTurn ? 'ring-4 ring-gold-400' : ''}`}
+      className={`btn-primary fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 shadow-2xl lg:hidden ${sheetOpen ? 'hidden' : ''} ${myTurn ? 'ring-4 ring-gold-400' : ''}`}
       onClick={() => setSheetOpen(true)}
       aria-controls="player-pool"
       aria-expanded={sheetOpen}
