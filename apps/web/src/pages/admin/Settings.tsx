@@ -172,8 +172,9 @@ function SimParams({ value, onChange }: { value: Values; onChange: (v: Values) =
         {num('chaos', 'Chaos (0 to 1)')}
         {num('outOfPositionPenalty', 'Out of position penalty', 1)}
         {num('reserveRating', 'Academy Reserve rating', 1)}
-        {num('aiSpread', 'AI club spread (0 to 1)', 0.05, 0.4)}
-        {num('aiCatchUp', 'AI catch-up to drafted teams (0 to 1)', 0.05, 0.8)}
+        {num('aiSpread', 'AI club spread (0 to 1, 1 = off)', 0.05, 1)}
+        {num('aiCatchUp', 'AI catch-up to drafted teams (0 to 1, 0 = off)', 0.05, 0)}
+        {num('form', 'Season form swing (rating points)', 0.25, 2)}
       </div>
       <div className="flex flex-wrap gap-4 text-sm">
         <label className="flex items-center gap-1">

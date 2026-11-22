@@ -65,6 +65,7 @@ const SETTINGS = {
       // Optional: settings saved before it existed use the engine default.
       aiSpread: z.number().min(0).max(1).optional(),
       aiCatchUp: z.number().min(0).max(1).optional(),
+      form: z.number().min(0).max(6).optional(),
     }),
     default: DEFAULT_SIM_PARAMS,
   },

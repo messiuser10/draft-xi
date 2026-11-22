@@ -132,6 +132,17 @@ export function spreadAi<T extends { kind: SeasonTeamInput['kind']; rating: Team
   });
 }
 
+/** Adds each team's seeded season form (see SimParams.form) to its attack and defense. */
+export function withForm<T extends { id: string; rating: TeamRating }>(teams: readonly T[], seed: number, form: number): T[] {
+  if (!(form > 0)) return [...teams];
+  return teams.map((t) => {
+    const swing = form * deriveRng(seed, 'form', t.id).normal();
+    const attack = round2(t.rating.attack + swing);
+    const defense = round2(t.rating.defense + swing);
+    return { ...t, rating: { ...t.rating, attack, defense, strength: round2((attack + defense) / 2) } };
+  });
+}
+
 function statKey(teamId: string, slotKey: string, playerId: number | null): string {
   return playerId === null ? `r:${teamId}:${slotKey}` : `p${playerId}@${teamId}`;
 }
@@ -141,8 +152,8 @@ export function simulateSeason(inputs: readonly SeasonTeamInput[], options: Seas
   const params = resolveParams(options.params);
   const full = (options.detail ?? 'full') === 'full';
   const seed = options.seed >>> 0;
-  const firstTeams = rateTeams(inputs, params);
-  const laterTeams = options.changes ? rateTeams(options.changes.teams, params) : null;
+  const firstTeams = withForm(rateTeams(inputs, params), seed, params.form);
+  const laterTeams = options.changes ? withForm(rateTeams(options.changes.teams, params), seed, params.form) : null;
   const changeFrom = options.changes?.fromMatchday ?? Number.POSITIVE_INFINITY;
   const firstById = new Map(firstTeams.map((t) => [t.id, t]));
   const laterById = laterTeams ? new Map(laterTeams.map((t) => [t.id, t])) : firstById;

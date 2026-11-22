@@ -197,15 +197,15 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - When a player's screen reaches the break, it reports "watched". The transfer window opens (transfers, trades, I'm done) only when every connected human has watched; until then they see who they are waiting for.
 - A window closes only when every connected human drafting team has pressed I'm done (at least one must). Offline players are not waited for. Bots are done at once. An admin can force a window closed.
 - Stats boards: most goals, most assists, and clean sheets per team (team names, not keepers). The best-rating board is gone.
-- AI clubs are pulled toward the AI average rating (`aiSpread`, default 0.4, editable in admin settings and the Lab). In a 200-season Monte Carlo, PSG's title chance went from 76% (no pull) to 31%, with Real Madrid at 18% and the best drafted team at 11%.
+- (Replaced, see Season form below) AI clubs were pulled toward the AI average rating (`aiSpread` 0.4). In a 200-season Monte Carlo, PSG's title chance went from 76% (no pull) to 31%, with Real Madrid at 18% and the best drafted team at 11%.
 - Data updated to the 22 Nov 2026 squads: 609 players. New strength order: PSG, Real Madrid, Bayern, Barcelona, Arsenal, Man City, Liverpool, Inter, Atlético, Man United, Chelsea, Dortmund, Juventus, Tottenham, AC Milan, Aston Villa, Newcastle, Brighton, Al-Nassr, Inter Miami.
 - The seed deactivates players no longer in the files (never deletes them, since picks and history reference them). Otherwise a transferred player would be draftable at both clubs. A player who returns to the files stays inactive until an admin reactivates him.
 - The server re-seeds on boot when a hash of `data/` differs from `app_settings.dataVersion`, so deploying new files updates the live database without a manual seed. Admin edits survive restarts and are overwritten only when new files ship.
-- AI catch-up (`aiCatchUp`, default 0.8, in admin settings and the Lab): every AI club's attack and defense rise by 0.8 x (drafted teams' average minus the best AI club), never below 0. Drafted XIs are all-stars from every club, so without it they won almost every title. Measured over 1,000 seasons per case:
-  - 3 all-star drafts: drafted teams' title share 100% → 64%.
-  - Solo all-star draft: 96% → 36%.
-  - Casual drafts are barely changed (2 teams: 29% → 24%; 3 teams: 36% → 35%), and PSG stays at 2% to 19%.
-  - Goals per match stay at about 2.66.
-- 0.8 rather than 1: at 1 the best AI clubs tie the drafted average and about eight teams are within 0.7 rating, so the title is close to a lottery.
-- Realism tests updated for the more even league: the champion averages about 72 points, so the target is now 65 to 95 (spec said 80 to 95), and the top three by rating must win over 45% of titles (was 60%).
-- Sensitivity stays at 0.09: the live database stores its simulation settings, so a new default would not reach it. Admins can raise it (for example to 0.12) for a more spread-out table.
+- Season form replaces the AI-only tweaks. Every team, human or AI, gets one seeded swing for the season (normal, standard deviation `form` = 2 rating points) added to attack and defense, like the good and bad years real clubs have. The same rules apply to everyone; the best team is the favourite but not a certainty.
+- `aiSpread` now defaults to 1 and `aiCatchUp` to 0 (both off). They stay as admin and Lab settings, along with `form`.
+- Tuned with sensitivity 0.09 (unchanged, so the live database's stored settings need no migration). Averages over Monte Carlo runs:
+  - Champion 86 points, bottom team 24, 2.77 goals per match.
+  - Normal league: the favourite wins about 17% of titles.
+  - One clearly best (all-star) team: wins about 62%, down from 95%.
+  - Three all-star drafts: win 86% between them (they are the three best teams), with the favourite at 40%.
+- The PSG complaint is covered by form too: PSG's title chance is 11% to 19% depending on the draft.

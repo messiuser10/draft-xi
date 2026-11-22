@@ -11,6 +11,7 @@ const PARAMS = [
   ['chaos', 'Chaos', 0.05],
   ['aiSpread', 'AI spread', 0.05],
   ['aiCatchUp', 'AI catch-up', 0.05],
+  ['form', 'Season form', 0.25],
 ] as const;
 
 export function AdminLabPage() {
