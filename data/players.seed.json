@@ -1,5 +1,5 @@
 {
- "source": "EA SPORTS FC 27 launch ratings (ea.com ratings pages), fetched 2026-11-20",
+ "source": "EA SPORTS FC 27 launch ratings (ea.com) with real transfers applied through 2026-11-22 (Wikipedia 2026-27 club season pages, 19 clubs + cross-references)",
  "players": [
   {
    "club": "Manchester City",
@@ -438,17 +438,6 @@
   },
   {
    "club": "Chelsea",
-   "name": "Enzo Fernández",
-   "primary_position": "CM",
-   "alt_positions": [
-    "CDM",
-    "CAM"
-   ],
-   "overall": 86,
-   "nationality": "Argentina"
-  },
-  {
-   "club": "Chelsea",
    "name": "Moisés Caicedo",
    "primary_position": "CDM",
    "alt_positions": [
@@ -542,6 +531,17 @@
   },
   {
    "club": "Manchester City",
+   "name": "Enzo Fernández",
+   "primary_position": "CM",
+   "alt_positions": [
+    "CDM",
+    "CAM"
+   ],
+   "overall": 86,
+   "nationality": "Argentina"
+  },
+  {
+   "club": "Manchester City",
    "name": "Rayan Cherki",
    "primary_position": "RW",
    "alt_positions": [
@@ -602,14 +602,6 @@
    ],
    "overall": 85,
    "nationality": "Croatia"
-  },
-  {
-   "club": "Aston Villa",
-   "name": "Emiliano Martínez",
-   "primary_position": "GK",
-   "alt_positions": [],
-   "overall": 85,
-   "nationality": "Argentina"
   },
   {
    "club": "Atlético Madrid",
@@ -673,6 +665,14 @@
    "nationality": "England"
   },
   {
+   "club": "Chelsea",
+   "name": "Emiliano Martínez",
+   "primary_position": "GK",
+   "alt_positions": [],
+   "overall": 85,
+   "nationality": "Argentina"
+  },
+  {
    "club": "FC Barcelona",
    "name": "Eric García",
    "primary_position": "CB",
@@ -716,6 +716,16 @@
    "primary_position": "ST",
    "alt_positions": [
     "CF"
+   ],
+   "overall": 85,
+   "nationality": "France"
+  },
+  {
+   "club": "Liverpool",
+   "name": "Bradley Barcola",
+   "primary_position": "LW",
+   "alt_positions": [
+    "LM"
    ],
    "overall": 85,
    "nationality": "France"
@@ -776,16 +786,6 @@
    ],
    "overall": 85,
    "nationality": "Belgium"
-  },
-  {
-   "club": "Paris Saint-Germain",
-   "name": "Bradley Barcola",
-   "primary_position": "LW",
-   "alt_positions": [
-    "LM"
-   ],
-   "overall": 85,
-   "nationality": "France"
   },
   {
    "club": "Tottenham Hotspur",
@@ -1070,16 +1070,6 @@
    ],
    "overall": 83,
    "nationality": "United States"
-  },
-  {
-   "club": "AC Milan",
-   "name": "Rafael Leão",
-   "primary_position": "LW",
-   "alt_positions": [
-    "LM"
-   ],
-   "overall": 83,
-   "nationality": "Portugal"
   },
   {
    "club": "Al-Nassr",
@@ -1458,14 +1448,6 @@
   },
   {
    "club": "Atlético Madrid",
-   "name": "José María Giménez",
-   "primary_position": "CB",
-   "alt_positions": [],
-   "overall": 82,
-   "nationality": "Uruguay"
-  },
-  {
-   "club": "Atlético Madrid",
    "name": "Juan Musso",
    "primary_position": "GK",
    "alt_positions": [],
@@ -1590,23 +1572,13 @@
   },
   {
    "club": "Manchester City",
-   "name": "Jack Grealish",
+   "name": "Iliman Ndiaye",
    "primary_position": "LM",
    "alt_positions": [
     "LW"
    ],
    "overall": 82,
-   "nationality": "England"
-  },
-  {
-   "club": "Manchester City",
-   "name": "Omar Marmoush",
-   "primary_position": "LW",
-   "alt_positions": [
-    "LM"
-   ],
-   "overall": 82,
-   "nationality": "Egypt"
+   "nationality": "Senegal"
   },
   {
    "club": "Manchester United",
@@ -1680,6 +1652,16 @@
    "nationality": "Argentina"
   },
   {
+   "club": "Tottenham Hotspur",
+   "name": "Omar Marmoush",
+   "primary_position": "LW",
+   "alt_positions": [
+    "LM"
+   ],
+   "overall": 82,
+   "nationality": "Egypt"
+  },
+  {
    "club": "AC Milan",
    "name": "Mario Gila",
    "primary_position": "CB",
@@ -1716,6 +1698,16 @@
    ],
    "overall": 81,
    "nationality": "Belgium"
+  },
+  {
+   "club": "Aston Villa",
+   "name": "Leon Goretzka",
+   "primary_position": "CDM",
+   "alt_positions": [
+    "CM"
+   ],
+   "overall": 81,
+   "nationality": "Germany"
   },
   {
    "club": "Aston Villa",
@@ -1866,6 +1858,14 @@
   },
   {
    "club": "Juventus",
+   "name": "Kamil Grabara",
+   "primary_position": "GK",
+   "alt_positions": [],
+   "overall": 81,
+   "nationality": "Denmark"
+  },
+  {
+   "club": "Juventus",
    "name": "Khéphren Thuram",
    "primary_position": "CM",
    "alt_positions": [
@@ -1916,16 +1916,6 @@
   },
   {
    "club": "Manchester City",
-   "name": "Nico González",
-   "primary_position": "CDM",
-   "alt_positions": [
-    "CM"
-   ],
-   "overall": 81,
-   "nationality": "Spain"
-  },
-  {
-   "club": "Manchester City",
    "name": "Rayan Aït-Nouri",
    "primary_position": "LB",
    "alt_positions": [
@@ -1959,6 +1949,16 @@
    "alt_positions": [],
    "overall": 81,
    "nationality": "Germany"
+  },
+  {
+   "club": "Newcastle United",
+   "name": "Nico González",
+   "primary_position": "CDM",
+   "alt_positions": [
+    "CM"
+   ],
+   "overall": 81,
+   "nationality": "Spain"
   },
   {
    "club": "Newcastle United",
@@ -2094,16 +2094,6 @@
   },
   {
    "club": "AC Milan",
-   "name": "Christopher Nkunku",
-   "primary_position": "ST",
-   "alt_positions": [
-    "CF"
-   ],
-   "overall": 80,
-   "nationality": "France"
-  },
-  {
-   "club": "AC Milan",
    "name": "Fikayo Tomori",
    "primary_position": "CB",
    "alt_positions": [],
@@ -2129,31 +2119,10 @@
    "nationality": "Italy"
   },
   {
-   "club": "AC Milan",
-   "name": "Youssouf Fofana",
-   "primary_position": "CM",
-   "alt_positions": [
-    "CDM",
-    "CAM"
-   ],
-   "overall": 80,
-   "nationality": "France"
-  },
-  {
    "club": "Al-Nassr",
    "name": "Bento",
    "primary_position": "GK",
    "alt_positions": [],
-   "overall": 80,
-   "nationality": "Brazil"
-  },
-  {
-   "club": "Arsenal",
-   "name": "Gabriel Martinelli",
-   "primary_position": "LW",
-   "alt_positions": [
-    "LM"
-   ],
    "overall": 80,
    "nationality": "Brazil"
   },
@@ -2200,6 +2169,16 @@
   },
   {
    "club": "Atlético Madrid",
+   "name": "Jonathan David",
+   "primary_position": "ST",
+   "alt_positions": [
+    "CF"
+   ],
+   "overall": 80,
+   "nationality": "Canada"
+  },
+  {
+   "club": "Atlético Madrid",
    "name": "Lee Kang In",
    "primary_position": "RW",
    "alt_positions": [
@@ -2217,16 +2196,6 @@
    ],
    "overall": 80,
    "nationality": "Croatia"
-  },
-  {
-   "club": "Brighton and Hove Albion",
-   "name": "Carlos Baleba",
-   "primary_position": "CDM",
-   "alt_positions": [
-    "CM"
-   ],
-   "overall": 80,
-   "nationality": "Cameroon"
   },
   {
    "club": "Brighton and Hove Albion",
@@ -2275,14 +2244,6 @@
    "alt_positions": [],
    "overall": 80,
    "nationality": "England"
-  },
-  {
-   "club": "Chelsea",
-   "name": "Robert Sánchez",
-   "primary_position": "GK",
-   "alt_positions": [],
-   "overall": 80,
-   "nationality": "Spain"
   },
   {
    "club": "Inter Milan",
@@ -2353,21 +2314,13 @@
   },
   {
    "club": "Juventus",
-   "name": "Jonathan David",
+   "name": "Nick Woltemade",
    "primary_position": "ST",
    "alt_positions": [
     "CF"
    ],
    "overall": 80,
-   "nationality": "Canada"
-  },
-  {
-   "club": "Juventus",
-   "name": "Michele Di Gregorio",
-   "primary_position": "GK",
-   "alt_positions": [],
-   "overall": 80,
-   "nationality": "Italy"
+   "nationality": "Germany"
   },
   {
    "club": "Juventus",
@@ -2400,21 +2353,21 @@
   },
   {
    "club": "Manchester City",
+   "name": "Ayyoub Bouaddi",
+   "primary_position": "CDM",
+   "alt_positions": [
+    "CM"
+   ],
+   "overall": 80,
+   "nationality": "France"
+  },
+  {
+   "club": "Manchester City",
    "name": "Gerónimo Rulli",
    "primary_position": "GK",
    "alt_positions": [],
    "overall": 80,
    "nationality": "Argentina"
-  },
-  {
-   "club": "Manchester City",
-   "name": "Savinho",
-   "primary_position": "RW",
-   "alt_positions": [
-    "RM"
-   ],
-   "overall": 80,
-   "nationality": "Brazil"
   },
   {
    "club": "Manchester United",
@@ -2426,6 +2379,16 @@
    ],
    "overall": 80,
    "nationality": "Brazil"
+  },
+  {
+   "club": "Manchester United",
+   "name": "Carlos Baleba",
+   "primary_position": "CDM",
+   "alt_positions": [
+    "CM"
+   ],
+   "overall": 80,
+   "nationality": "Cameroon"
   },
   {
    "club": "Manchester United",
@@ -2457,16 +2420,6 @@
    ],
    "overall": 80,
    "nationality": "Brazil"
-  },
-  {
-   "club": "Newcastle United",
-   "name": "Nick Woltemade",
-   "primary_position": "ST",
-   "alt_positions": [
-    "CF"
-   ],
-   "overall": 80,
-   "nationality": "Germany"
   },
   {
    "club": "Newcastle United",
@@ -2544,6 +2497,16 @@
    "nationality": "Portugal"
   },
   {
+   "club": "Tottenham Hotspur",
+   "name": "Savinho",
+   "primary_position": "RW",
+   "alt_positions": [
+    "RM"
+   ],
+   "overall": 80,
+   "nationality": "Brazil"
+  },
+  {
    "club": "AC Milan",
    "name": "Diego Moreira",
    "primary_position": "RM",
@@ -2564,16 +2527,6 @@
    "nationality": "England"
   },
   {
-   "club": "Arsenal",
-   "name": "Gabriel Jesus",
-   "primary_position": "ST",
-   "alt_positions": [
-    "CF"
-   ],
-   "overall": 79,
-   "nationality": "Brazil"
-  },
-  {
    "club": "Aston Villa",
    "name": "Ian Maatsen",
    "primary_position": "LB",
@@ -2582,6 +2535,16 @@
    ],
    "overall": 79,
    "nationality": "Netherlands"
+  },
+  {
+   "club": "Aston Villa",
+   "name": "Nicolas Jackson",
+   "primary_position": "ST",
+   "alt_positions": [
+    "CF"
+   ],
+   "overall": 79,
+   "nationality": "Senegal"
   },
   {
    "club": "Bayern Munich",
@@ -2672,16 +2635,6 @@
   },
   {
    "club": "Chelsea",
-   "name": "Nicolas Jackson",
-   "primary_position": "ST",
-   "alt_positions": [
-    "CF"
-   ],
-   "overall": 79,
-   "nationality": "Senegal"
-  },
-  {
-   "club": "Chelsea",
    "name": "Pep Chavarría",
    "primary_position": "LB",
    "alt_positions": [
@@ -2719,6 +2672,16 @@
   },
   {
    "club": "FC Barcelona",
+   "name": "Gabriel Jesus",
+   "primary_position": "ST",
+   "alt_positions": [
+    "CF"
+   ],
+   "overall": 79,
+   "nationality": "Brazil"
+  },
+  {
+   "club": "FC Barcelona",
    "name": "Gerard Martín",
    "primary_position": "CB",
    "alt_positions": [],
@@ -2742,6 +2705,17 @@
    ],
    "overall": 79,
    "nationality": "Argentina"
+  },
+  {
+   "club": "Juventus",
+   "name": "Pape Matar Sarr",
+   "primary_position": "CM",
+   "alt_positions": [
+    "CDM",
+    "CAM"
+   ],
+   "overall": 79,
+   "nationality": "Senegal"
   },
   {
    "club": "Juventus",
@@ -2882,25 +2856,6 @@
   },
   {
    "club": "Tottenham Hotspur",
-   "name": "Kevin Danso",
-   "primary_position": "CB",
-   "alt_positions": [],
-   "overall": 79,
-   "nationality": "Austria"
-  },
-  {
-   "club": "Tottenham Hotspur",
-   "name": "Pape Matar Sarr",
-   "primary_position": "CM",
-   "alt_positions": [
-    "CDM",
-    "CAM"
-   ],
-   "overall": 79,
-   "nationality": "Senegal"
-  },
-  {
-   "club": "Tottenham Hotspur",
    "name": "Rodrigo Bentancur",
    "primary_position": "CDM",
    "alt_positions": [
@@ -2931,27 +2886,6 @@
   },
   {
    "club": "AC Milan",
-   "name": "Samuele Ricci",
-   "primary_position": "CM",
-   "alt_positions": [
-    "CDM",
-    "CAM"
-   ],
-   "overall": 78,
-   "nationality": "Italy"
-  },
-  {
-   "club": "AC Milan",
-   "name": "Santiago Giménez",
-   "primary_position": "ST",
-   "alt_positions": [
-    "CF"
-   ],
-   "overall": 78,
-   "nationality": "Mexico"
-  },
-  {
-   "club": "AC Milan",
    "name": "Strahinja Pavlović",
    "primary_position": "CB",
    "alt_positions": [],
@@ -2975,16 +2909,6 @@
    "alt_positions": [],
    "overall": 78,
    "nationality": "Spain"
-  },
-  {
-   "club": "Arsenal",
-   "name": "Fábio Vieira",
-   "primary_position": "CAM",
-   "alt_positions": [
-    "CM"
-   ],
-   "overall": 78,
-   "nationality": "Portugal"
   },
   {
    "club": "Arsenal",
@@ -3319,6 +3243,16 @@
   },
   {
    "club": "Newcastle United",
+   "name": "Matias Fernandez-Pardo",
+   "primary_position": "ST",
+   "alt_positions": [
+    "CF"
+   ],
+   "overall": 78,
+   "nationality": "Belgium"
+  },
+  {
+   "club": "Newcastle United",
    "name": "Nick Pope",
    "primary_position": "GK",
    "alt_positions": [],
@@ -3542,28 +3476,10 @@
   },
   {
    "club": "Chelsea",
-   "name": "Axel Disasi",
-   "primary_position": "CB",
-   "alt_positions": [],
-   "overall": 77,
-   "nationality": "France"
-  },
-  {
-   "club": "Chelsea",
    "name": "Jamie Gittens",
    "primary_position": "LM",
    "alt_positions": [
     "LW"
-   ],
-   "overall": 77,
-   "nationality": "England"
-  },
-  {
-   "club": "Chelsea",
-   "name": "Liam Delap",
-   "primary_position": "ST",
-   "alt_positions": [
-    "CF"
    ],
    "overall": 77,
    "nationality": "England"
@@ -3575,14 +3491,6 @@
    "alt_positions": [],
    "overall": 77,
    "nationality": "Senegal"
-  },
-  {
-   "club": "Chelsea",
-   "name": "Tosin Adarabioyo",
-   "primary_position": "CB",
-   "alt_positions": [],
-   "overall": 77,
-   "nationality": "England"
   },
   {
    "club": "Inter Miami",
@@ -3631,16 +3539,6 @@
    ],
    "overall": 77,
    "nationality": "France"
-  },
-  {
-   "club": "Liverpool",
-   "name": "Harvey Elliott",
-   "primary_position": "CAM",
-   "alt_positions": [
-    "CM"
-   ],
-   "overall": 77,
-   "nationality": "England"
   },
   {
    "club": "Liverpool",
@@ -3736,6 +3634,14 @@
    "nationality": "Slovakia"
   },
   {
+   "club": "Tottenham Hotspur",
+   "name": "Tosin Adarabioyo",
+   "primary_position": "CB",
+   "alt_positions": [],
+   "overall": 77,
+   "nationality": "England"
+  },
+  {
    "club": "AC Milan",
    "name": "Ardon Jashari",
    "primary_position": "CDM",
@@ -3744,6 +3650,16 @@
    ],
    "overall": 76,
    "nationality": "Switzerland"
+  },
+  {
+   "club": "AC Milan",
+   "name": "Omari Hutchinson",
+   "primary_position": "RM",
+   "alt_positions": [
+    "RW"
+   ],
+   "overall": 76,
+   "nationality": "England"
   },
   {
    "club": "AC Milan",
@@ -3763,6 +3679,16 @@
    ],
    "overall": 76,
    "nationality": "Brazil"
+  },
+  {
+   "club": "Aston Villa",
+   "name": "Ibrahim Mbaye",
+   "primary_position": "RW",
+   "alt_positions": [
+    "RM"
+   ],
+   "overall": 76,
+   "nationality": "Senegal"
   },
   {
    "club": "Aston Villa",
@@ -3913,42 +3839,12 @@
    "nationality": "England"
   },
   {
-   "club": "Paris Saint-Germain",
-   "name": "Ibrahim Mbaye",
-   "primary_position": "RW",
-   "alt_positions": [
-    "RM"
-   ],
-   "overall": 76,
-   "nationality": "Senegal"
-  },
-  {
    "club": "AC Milan",
    "name": "Koni De Winter",
    "primary_position": "CB",
    "alt_positions": [],
    "overall": 75,
    "nationality": "Belgium"
-  },
-  {
-   "club": "Arsenal",
-   "name": "Ethan Nwaneri",
-   "primary_position": "RW",
-   "alt_positions": [
-    "RM"
-   ],
-   "overall": 75,
-   "nationality": "England"
-  },
-  {
-   "club": "Arsenal",
-   "name": "Reiss Nelson",
-   "primary_position": "RM",
-   "alt_positions": [
-    "RW"
-   ],
-   "overall": 75,
-   "nationality": "England"
   },
   {
    "club": "Bayern Munich",
@@ -3971,6 +3867,16 @@
    "nationality": "France"
   },
   {
+   "club": "Borussia Dortmund",
+   "name": "Ethan Nwaneri",
+   "primary_position": "RW",
+   "alt_positions": [
+    "RM"
+   ],
+   "overall": 75,
+   "nationality": "England"
+  },
+  {
    "club": "Brighton and Hove Albion",
    "name": "Costinha",
    "primary_position": "RB",
@@ -3979,6 +3885,16 @@
    ],
    "overall": 75,
    "nationality": "Portugal"
+  },
+  {
+   "club": "Brighton and Hove Albion",
+   "name": "Femi Azeez",
+   "primary_position": "RM",
+   "alt_positions": [
+    "RW"
+   ],
+   "overall": 75,
+   "nationality": "Nigeria"
   },
   {
    "club": "Brighton and Hove Albion",
@@ -4005,27 +3921,6 @@
    "alt_positions": [],
    "overall": 75,
    "nationality": "England"
-  },
-  {
-   "club": "Chelsea",
-   "name": "Mykhailo Mudryk",
-   "primary_position": "LM",
-   "alt_positions": [
-    "LW"
-   ],
-   "overall": 75,
-   "nationality": "Ukraine"
-  },
-  {
-   "club": "Juventus",
-   "name": "Fabio Miretti",
-   "primary_position": "CM",
-   "alt_positions": [
-    "CDM",
-    "CAM"
-   ],
-   "overall": 75,
-   "nationality": "Italy"
   },
   {
    "club": "Liverpool",
@@ -4056,15 +3951,14 @@
    "nationality": "Denmark"
   },
   {
-   "club": "Paris Saint-Germain",
-   "name": "Renato Sanches",
-   "primary_position": "CM",
+   "club": "Tottenham Hotspur",
+   "name": "Mykhailo Mudryk",
+   "primary_position": "LM",
    "alt_positions": [
-    "CDM",
-    "CAM"
+    "LW"
    ],
    "overall": 75,
-   "nationality": "Portugal"
+   "nationality": "Ukraine"
   },
   {
    "club": "AC Milan",
@@ -4093,6 +3987,16 @@
    "alt_positions": [],
    "overall": 74,
    "nationality": "Germany"
+  },
+  {
+   "club": "Brighton and Hove Albion",
+   "name": "Chema Andrés",
+   "primary_position": "CDM",
+   "alt_positions": [
+    "CM"
+   ],
+   "overall": 74,
+   "nationality": "Spain"
   },
   {
    "club": "Brighton and Hove Albion",
@@ -4671,6 +4575,16 @@
    ],
    "overall": 69,
    "nationality": "England"
+  },
+  {
+   "club": "Brighton and Hove Albion",
+   "name": "Jaouen Hadjam",
+   "primary_position": "LB",
+   "alt_positions": [
+    "LWB"
+   ],
+   "overall": 69,
+   "nationality": "Algeria"
   },
   {
    "club": "Inter Miami",

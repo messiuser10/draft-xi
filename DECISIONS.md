@@ -23,7 +23,7 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - The "at least 2 GKs" rule counts players whose primary or alt position is GK.
 - Duplicate names are checked within a club only, case-insensitively, after NFC normalisation; the same name at two clubs is fine (Nico González plays for Manchester City and Juventus).
 - Seeding matches clubs by name and players by (club, name); it inserts new rows, updates changed fields and leaves identical rows untouched.
-- Rows no longer in the files are reported by the seed but never deleted or deactivated, since picks and history may reference them.
+- (Replaced) Rows no longer in the files used to be left active; see the Nov 2026 data lines below.
 - The seed only writes data from the files; `is_active`, `is_injured`, `source_note`, `in_pool` and `notes` belong to admins and are never overwritten.
 - `full_name` and `display_name` both start as the EA name, which is already a display name (for example "Vini Jr.").
 - `users.username` is nullable (guests have none) and unique.
@@ -198,3 +198,7 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
 - A window closes only when every connected human drafting team has pressed I'm done (at least one must). Offline players are not waited for. Bots are done at once. An admin can force a window closed.
 - Stats boards: most goals, most assists, and clean sheets per team (team names, not keepers). The best-rating board is gone.
 - AI clubs are pulled toward the AI average rating (`aiSpread`, default 0.4, editable in admin settings and the Lab). In a 200-season Monte Carlo, PSG's title chance went from 76% (no pull) to 31%, with Real Madrid at 18% and the best drafted team at 11%.
+- Data updated to the 22 Nov 2026 squads: 609 players. New strength order: PSG, Real Madrid, Bayern, Barcelona, Arsenal, Man City, Liverpool, Inter, Atlético, Man United, Chelsea, Dortmund, Juventus, Tottenham, AC Milan, Aston Villa, Newcastle, Brighton, Al-Nassr, Inter Miami.
+- The seed deactivates players no longer in the files (never deletes them, since picks and history reference them). Otherwise a transferred player would be draftable at both clubs. A player who returns to the files stays inactive until an admin reactivates him.
+- The server re-seeds on boot when a hash of `data/` differs from `app_settings.dataVersion`, so deploying new files updates the live database without a manual seed. Admin edits survive restarts and are overwritten only when new files ship.
+- The Monte Carlo test uses draft seed 1: with the new squads, seed 5's three bot-drafted XIs (rated 89 to 90) won every title against AI clubs (best about 86).

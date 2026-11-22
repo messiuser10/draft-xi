@@ -1,11 +1,10 @@
-/** Server entry: migrate, seed an empty database from data/, then listen. */
+/** Server entry: migrate, seed from data/ when it is new or changed, then listen. */
 import path from 'node:path';
-import { count } from 'drizzle-orm';
 import { loadConfig } from './config';
 import { openDatabase } from './db/client';
 import { createDatabase } from './db/database';
 import { loadDataset } from './data/dataset';
-import { seedDatabase } from './data/seed';
+import { seedOnBoot } from './data/boot';
 import { buildServer } from './http/app';
 import { REPO_ROOT } from './paths';
 import { ensureAppSettings } from './settings/app-settings';
@@ -16,10 +15,12 @@ async function main(): Promise<void> {
   await handle.migrate();
   const database = createDatabase(handle);
 
-  const [clubs] = await database.db.select({ n: count() }).from(database.t.clubs);
-  if ((clubs?.n ?? 0) === 0) {
-    const report = await seedDatabase(handle, await loadDataset());
-    console.log(`Seeded ${report.clubs.inserted} clubs and ${report.players.inserted} players from data/`);
+  const report = await seedOnBoot(handle, database, await loadDataset());
+  if (report) {
+    const { clubs, players, deactivatedPlayers } = report;
+    console.log(
+      `Seeded from data/: clubs ${clubs.inserted} new, ${clubs.updated} updated; players ${players.inserted} new, ${players.updated} updated, ${deactivatedPlayers} deactivated`,
+    );
   }
   await ensureAppSettings(database);
 

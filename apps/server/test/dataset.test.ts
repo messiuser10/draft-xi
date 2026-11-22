@@ -34,9 +34,9 @@ describe('supplied data files', () => {
     dataset = await loadDataset();
   });
 
-  it('has 618 players in both players.seed.json and players.csv, and 20 clubs', () => {
-    expect(dataset.players).toHaveLength(618);
-    expect(dataset.csvPlayers).toHaveLength(618);
+  it('has 609 players in both players.seed.json and players.csv, and 20 clubs', () => {
+    expect(dataset.players).toHaveLength(609);
+    expect(dataset.csvPlayers).toHaveLength(609);
     expect(dataset.clubs).toHaveLength(20);
   });
 

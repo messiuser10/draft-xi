@@ -42,10 +42,10 @@ npm install
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Runs the API server (http://127.0.0.1:3000, restarts on change) and the web app (http://localhost:5173, proxies `/api` and `/socket.io` to the server) together. Open http://localhost:5173. The server migrates the database on boot and seeds it from `data/` if it is empty. |
+| `npm run dev` | Runs the API server (http://127.0.0.1:3000, restarts on change) and the web app (http://localhost:5173, proxies `/api` and `/socket.io` to the server) together. Open http://localhost:5173. The server migrates the database on boot and seeds it from `data/` when it is empty or the files changed. |
 | `npm run build` | Builds the web app into `apps/web/dist`. |
 | `npm start` | Production mode: one process serves the API, Socket.IO and the built web app on `PORT`. Run `npm run build` first. |
-| `npm run data:validate` | Checks `data/` against the data rules (618 players, 20 known clubs, at least 22 players and 2 GKs per club, valid positions, ratings 40 to 99, no duplicate names within a club). Exits 1 on errors. |
+| `npm run data:validate` | Checks `data/` against the data rules (609 players, 20 known clubs, at least 22 players and 2 GKs per club, valid positions, ratings 40 to 99, no duplicate names within a club). Exits 1 on errors. |
 | `npm run seed` | Applies migrations, validates `data/`, then loads clubs and players into the database. Idempotent: run it as often as you like. |
 | `npm run sim -- --humans 3 --seed 42` | Random-drafts N human teams, adds the (20 - N) strongest clubs, simulates a season and prints the table, awards and draft grades. Add `--monte-carlo 1000` for expected strength, `--seasons 5` for a titles table, `--injuries`, `--no-chemistry`, `--keep-drafted`, or override `--base-goals`, `--home-advantage`, `--sensitivity`, `--chaos`. |
 | `npm run db:migrate` | Applies pending migrations only. |
@@ -98,7 +98,7 @@ scripts/            CLI entry points: seed, validate-data, migrate, sim
 
 ## Data
 
-`data/` holds the owner-supplied files (EA SPORTS FC 27 launch ratings). They are the only source
+`data/` holds the owner-supplied files (EA SPORTS FC 27 launch ratings with real transfers applied through 22 November 2026: 609 players, 20 clubs). They are the only source
 of players and clubs; nothing is generated.
 
 - `players.seed.json` is what gets seeded, because it carries `alt_positions`.
@@ -108,8 +108,13 @@ of players and clubs; nothing is generated.
 
 To change the data, edit the files, run `npm run data:validate`, then `npm run seed`. The seed
 matches clubs by name and players by club plus name. It inserts new rows, updates changed ones
-and leaves identical ones alone. Players removed from the files are listed in the output but
-not deleted, because drafts and season history may still reference them.
+and leaves identical ones alone. Players removed from the files are listed in the output and
+deactivated (out of the draft pool and AI squads), but not deleted, because drafts and season
+history may still reference them.
+
+The server also re-seeds itself on startup whenever the files in `data/` have changed since the
+last boot (it keeps a hash in `app_settings` under `dataVersion`). So deploying new data files is
+enough to update the live database; admin edits survive ordinary restarts.
 
 ## Simulation defaults
 
@@ -193,4 +198,4 @@ ADMIN_USERNAME=yourname docker compose up --build
 Then open http://localhost:3000. Compose reads `ADMIN_USERNAME`, `POSTGRES_PASSWORD` (default
 `draftxi`, change it outside local use), `PORT` (host port, default 3000) and `COOKIE_SECURE`
 (default `false` for plain http on localhost; set `true` behind HTTPS). The database is migrated
-and seeded from `data/` on first boot.
+and seeded from `data/` on first boot and whenever the data files change.

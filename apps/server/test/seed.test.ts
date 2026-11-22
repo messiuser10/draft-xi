@@ -4,6 +4,8 @@
 import { sql } from 'drizzle-orm';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { type Dataset, type DbHandle, loadDataset, seedDatabase, SeedValidationError } from '../src';
+import { createDatabase } from '../src/db/database';
+import { seedOnBoot } from '../src/data/boot';
 import { DIALECTS, exec, rows, selectClubs, selectPlayers } from './helpers/db';
 
 let dataset: Dataset;
@@ -37,12 +39,12 @@ describe.each(DIALECTS)('seed on %s', (_dialect, open) => {
     expect(await count(handle, 'clubs')).toBe(0);
   });
 
-  it('loads all 20 clubs and 618 players', async () => {
+  it('loads all 20 clubs and 609 players', async () => {
     const report = await seedDatabase(handle, dataset);
     expect(report.clubs).toEqual({ inserted: 20, updated: 0, unchanged: 0, notInFile: [] });
-    expect(report.players).toEqual({ inserted: 618, updated: 0, unchanged: 0, notInFile: [] });
+    expect(report.players).toEqual({ inserted: 609, updated: 0, unchanged: 0, notInFile: [] });
     expect(await count(handle, 'clubs')).toBe(20);
-    expect(await count(handle, 'players')).toBe(618);
+    expect(await count(handle, 'players')).toBe(609);
   });
 
   it('stores clubs and players exactly as supplied', async () => {
@@ -57,7 +59,7 @@ describe.each(DIALECTS)('seed on %s', (_dialect, open) => {
       leagueName: 'Ligue 1',
       primaryColor: '#004170',
       secondaryColor: '#DA291C',
-      strengthRating: 89.23,
+      strengthRating: 88.93,
       inPool: true,
       notes: null,
     });
@@ -101,11 +103,11 @@ describe.each(DIALECTS)('seed on %s', (_dialect, open) => {
 
     const again = await seedDatabase(handle, dataset);
     expect(again.clubs).toEqual({ inserted: 0, updated: 0, unchanged: 20, notInFile: [] });
-    expect(again.players).toEqual({ inserted: 0, updated: 0, unchanged: 618, notInFile: [] });
+    expect(again.players).toEqual({ inserted: 0, updated: 0, unchanged: 609, notInFile: [] });
 
     const idsAfter = (await selectPlayers(handle)).map((p) => p.id).sort((a, b) => a - b);
     expect(idsAfter).toEqual(idsBefore);
-    expect(await count(handle, 'players')).toBe(618);
+    expect(await count(handle, 'players')).toBe(609);
   });
 
   it('updates only the rows that changed in the files', async () => {
@@ -123,7 +125,7 @@ describe.each(DIALECTS)('seed on %s', (_dialect, open) => {
     const report = await seedDatabase(handle, edited);
     // Arsenal's colour changed; Manchester City's strength is recomputed from Haaland's new rating.
     expect(report.clubs).toMatchObject({ inserted: 0, updated: 2, unchanged: 18 });
-    expect(report.players).toMatchObject({ inserted: 0, updated: 1, unchanged: 617 });
+    expect(report.players).toMatchObject({ inserted: 0, updated: 1, unchanged: 608 });
 
     const haaland = (await selectPlayers(handle)).find((p) => p.fullName === 'Erling Haaland');
     expect(haaland).toMatchObject({ overall: 92, altPositions: [] });
@@ -133,7 +135,7 @@ describe.each(DIALECTS)('seed on %s', (_dialect, open) => {
     expect(cityAfter!.strengthRating!).toBeCloseTo(cityBefore!.strengthRating! + 1 / 11, 2);
   });
 
-  it('reports players missing from the files but never deletes them', async () => {
+  it('deactivates players missing from the files but never deletes them', async () => {
     await seedDatabase(handle, dataset);
     const target = dataset.players.find((p) => p.club === 'Chelsea');
     expect(target).toBeDefined();
@@ -146,7 +148,22 @@ describe.each(DIALECTS)('seed on %s', (_dialect, open) => {
     const report = await seedDatabase(handle, swapped);
     expect(report.players.inserted).toBe(1);
     expect(report.players.notInFile).toEqual([`Chelsea / ${target?.name}`]);
-    expect(await count(handle, 'players')).toBe(619);
+    expect(report.deactivatedPlayers).toBe(1);
+    expect(await count(handle, 'players')).toBe(610);
+    const stored = await selectPlayers(handle);
+    expect(stored.find((p) => p.fullName === target?.name)?.isActive).toBe(false);
+    expect(stored.filter((p) => p.isActive)).toHaveLength(609);
+    // Already inactive, so a second run deactivates nothing new.
+    expect((await seedDatabase(handle, swapped)).deactivatedPlayers).toBe(0);
+  });
+
+  it('seeds on boot only when the data files changed', async () => {
+    const database = createDatabase(handle);
+    expect((await seedOnBoot(handle, database, dataset))?.players.inserted).toBe(609);
+    expect(await seedOnBoot(handle, database, dataset)).toBeNull();
+    const changed: Dataset = { ...dataset, players: dataset.players.map((p) => (p.name === 'Erling Haaland' ? { ...p, overall: 92 } : p)) };
+    expect((await seedOnBoot(handle, database, changed))?.players.updated).toBe(1);
+    expect(await seedOnBoot(handle, database, changed)).toBeNull();
   });
 
   it('refuses invalid data and writes nothing', async () => {

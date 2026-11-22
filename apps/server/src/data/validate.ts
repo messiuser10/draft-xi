@@ -7,7 +7,7 @@ import type { Dataset } from './dataset';
 import { datasetToEngine } from './engine';
 
 export const DATA_RULES = {
-  expectedPlayerCount: 618,
+  expectedPlayerCount: 609,
   expectedClubCount: 20,
   minSquadSize: 22,
   minGoalkeepers: 2,

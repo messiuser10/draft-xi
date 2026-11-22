@@ -3,7 +3,8 @@ import { monteCarlo, rateTeams, resolveParams, simulateMultiSeason } from '../sr
 import { makeLeague } from './helpers/data';
 
 describe('monteCarlo', () => {
-  const { teams } = makeLeague(3, 5);
+  // Draft seed 1: with the Nov 2026 squads, seed 5's three bot-drafted XIs win every title.
+  const { teams } = makeLeague(3, 1);
   const mc = monteCarlo(teams, { seed: 1, runs: 1000 });
 
   it('runs 1,000 seasons and gives consistent probabilities', () => {

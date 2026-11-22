@@ -1,11 +1,11 @@
 /**
  * Loads the validated seed files into the database. Idempotent: clubs are matched by name and
  * players by (club, name); new rows are inserted, changed rows updated, identical rows left alone.
- * Rows in the database that are no longer in the files are reported, never deleted, because
- * drafts and season history may reference them.
+ * Players in the database that are no longer in the files are deactivated (never deleted, because
+ * drafts and season history may reference them), so they leave the draft pool and AI squads.
  */
 import { computeClubStrengths, type Position } from '@draft-xi/engine';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { DbHandle, PostgresHandle, SqliteHandle } from '../db/client';
 import type { Dataset } from './dataset';
 import { datasetToEngine } from './engine';
@@ -103,6 +103,14 @@ export interface SeedCounts {
 export interface SeedReport {
   clubs: SeedCounts;
   players: SeedCounts;
+  /** Active players missing from the files that this run deactivated. */
+  deactivatedPlayers: number;
+}
+
+/** Ids of still-active rows whose key the incoming data no longer mentions. */
+function staleActiveIds<T extends { id: number; isActive: boolean }>(rows: readonly T[], keyOf: (row: T) => string, plan: ChangePlan<unknown>): number[] {
+  const gone = new Set(plan.notInIncoming);
+  return rows.filter((r) => r.isActive && gone.has(keyOf(r))).map((r) => r.id);
 }
 
 export class SeedValidationError extends Error {
@@ -208,8 +216,9 @@ function seedSqlite({ db, schema: s }: SqliteHandle, dataset: Dataset): SeedRepo
 
     const clubList = tx.select({ id: s.clubs.id, name: s.clubs.name }).from(s.clubs).all();
     const clubIdByName = new Map(clubList.map((c) => [c.name, c.id]));
+    const existingPlayers = tx.select().from(s.players).all();
     const playerPlan = planChanges(
-      tx.select().from(s.players).all(),
+      existingPlayers,
       playerRowsFromDataset(dataset, clubIdByName),
       playerKey,
       PLAYER_FIELDS,
@@ -218,11 +227,14 @@ function seedSqlite({ db, schema: s }: SqliteHandle, dataset: Dataset): SeedRepo
     for (const u of playerPlan.toUpdate) {
       tx.update(s.players).set(u.values).where(eq(s.players.id, u.id)).run();
     }
+    const stale = staleActiveIds(existingPlayers, playerKey, playerPlan);
+    for (const ids of chunks(stale)) tx.update(s.players).set({ isActive: false, updatedAt: new Date() }).where(inArray(s.players.id, ids)).run();
 
     const clubNameById = new Map(clubList.map((c) => [c.id, c.name]));
     return {
       clubs: counts(clubPlan),
       players: counts(playerPlan, describePlayerKey(clubNameById)),
+      deactivatedPlayers: stale.length,
     };
   });
 }
@@ -242,8 +254,9 @@ async function seedPostgres({ db, schema: s }: PostgresHandle, dataset: Dataset)
 
     const clubList = await tx.select({ id: s.clubs.id, name: s.clubs.name }).from(s.clubs);
     const clubIdByName = new Map(clubList.map((c) => [c.name, c.id]));
+    const existingPlayers = await tx.select().from(s.players);
     const playerPlan = planChanges(
-      await tx.select().from(s.players),
+      existingPlayers,
       playerRowsFromDataset(dataset, clubIdByName),
       playerKey,
       PLAYER_FIELDS,
@@ -252,11 +265,14 @@ async function seedPostgres({ db, schema: s }: PostgresHandle, dataset: Dataset)
     for (const u of playerPlan.toUpdate) {
       await tx.update(s.players).set(u.values).where(eq(s.players.id, u.id));
     }
+    const stale = staleActiveIds(existingPlayers, playerKey, playerPlan);
+    for (const ids of chunks(stale)) await tx.update(s.players).set({ isActive: false, updatedAt: new Date() }).where(inArray(s.players.id, ids));
 
     const clubNameById = new Map(clubList.map((c) => [c.id, c.name]));
     return {
       clubs: counts(clubPlan),
       players: counts(playerPlan, describePlayerKey(clubNameById)),
+      deactivatedPlayers: stale.length,
     };
   });
 }

@@ -6,10 +6,10 @@
   "league_name": "Ligue 1",
   "primary_color": "#004170",
   "secondary_color": "#DA291C",
-  "squad_size": 29,
+  "squad_size": 26,
   "best_formation": "4-3-3",
   "best_xi_average": 87.73,
-  "strength_rating": 89.23,
+  "strength_rating": 88.93,
   "strength_rank": 1
  },
  {
@@ -26,19 +26,6 @@
   "strength_rank": 2
  },
  {
-  "name": "Arsenal",
-  "short_name": "Arsenal",
-  "country": "England",
-  "league_name": "Premier League",
-  "primary_color": "#EF0107",
-  "secondary_color": "#FFFFFF",
-  "squad_size": 29,
-  "best_formation": "4-3-3",
-  "best_xi_average": 86.18,
-  "strength_rating": 87.68,
-  "strength_rank": 3
- },
- {
   "name": "Bayern Munich",
   "short_name": "Bayern",
   "country": "Germany",
@@ -49,20 +36,7 @@
   "best_formation": "4-3-3",
   "best_xi_average": 86.18,
   "strength_rating": 87.58,
-  "strength_rank": 4
- },
- {
-  "name": "Manchester City",
-  "short_name": "Man City",
-  "country": "England",
-  "league_name": "Premier League",
-  "primary_color": "#6CABDD",
-  "secondary_color": "#1C2C5B",
-  "squad_size": 30,
-  "best_formation": "3-4-3",
-  "best_xi_average": 85.64,
-  "strength_rating": 87.04,
-  "strength_rank": 5
+  "strength_rank": 3
  },
  {
   "name": "FC Barcelona",
@@ -71,10 +45,36 @@
   "league_name": "LaLiga",
   "primary_color": "#A50044",
   "secondary_color": "#004D98",
-  "squad_size": 29,
+  "squad_size": 30,
   "best_formation": "4-3-3",
-  "best_xi_average": 84.91,
-  "strength_rating": 86.21,
+  "best_xi_average": 86.18,
+  "strength_rating": 87.48,
+  "strength_rank": 4
+ },
+ {
+  "name": "Arsenal",
+  "short_name": "Arsenal",
+  "country": "England",
+  "league_name": "Premier League",
+  "primary_color": "#EF0107",
+  "secondary_color": "#FFFFFF",
+  "squad_size": 24,
+  "best_formation": "4-3-3",
+  "best_xi_average": 86.18,
+  "strength_rating": 87.38,
+  "strength_rank": 5
+ },
+ {
+  "name": "Manchester City",
+  "short_name": "Man City",
+  "country": "England",
+  "league_name": "Premier League",
+  "primary_color": "#6CABDD",
+  "secondary_color": "#1C2C5B",
+  "squad_size": 29,
+  "best_formation": "3-4-3",
+  "best_xi_average": 85.82,
+  "strength_rating": 87.12,
   "strength_rank": 6
  },
  {
@@ -85,9 +85,9 @@
   "primary_color": "#C8102E",
   "secondary_color": "#F6EB61",
   "squad_size": 32,
-  "best_formation": "3-5-2",
-  "best_xi_average": 84.0,
-  "strength_rating": 85.5,
+  "best_formation": "4-3-3",
+  "best_xi_average": 84.09,
+  "strength_rating": 85.59,
   "strength_rank": 7
  },
  {
@@ -112,8 +112,8 @@
   "secondary_color": "#272E61",
   "squad_size": 31,
   "best_formation": "3-4-3",
-  "best_xi_average": 83.36,
-  "strength_rating": 84.56,
+  "best_xi_average": 83.27,
+  "strength_rating": 84.47,
   "strength_rank": 9
  },
  {
@@ -123,10 +123,10 @@
   "league_name": "Premier League",
   "primary_color": "#DA291C",
   "secondary_color": "#FBE122",
-  "squad_size": 34,
+  "squad_size": 35,
   "best_formation": "3-4-3",
   "best_xi_average": 83.0,
-  "strength_rating": 84.3,
+  "strength_rating": 84.4,
   "strength_rank": 10
  },
  {
@@ -136,10 +136,10 @@
   "league_name": "Premier League",
   "primary_color": "#034694",
   "secondary_color": "#FFFFFF",
-  "squad_size": 38,
-  "best_formation": "4-3-2-1",
-  "best_xi_average": 82.55,
-  "strength_rating": 84.05,
+  "squad_size": 32,
+  "best_formation": "3-5-2",
+  "best_xi_average": 82.45,
+  "strength_rating": 83.95,
   "strength_rank": 11
  },
  {
@@ -149,24 +149,11 @@
   "league_name": "Bundesliga",
   "primary_color": "#FDE100",
   "secondary_color": "#000000",
-  "squad_size": 29,
+  "squad_size": 30,
   "best_formation": "4-3-2-1",
   "best_xi_average": 82.91,
-  "strength_rating": 83.81,
+  "strength_rating": 83.91,
   "strength_rank": 12
- },
- {
-  "name": "AC Milan",
-  "short_name": "AC Milan",
-  "country": "Italy",
-  "league_name": "Serie A",
-  "primary_color": "#FB090B",
-  "secondary_color": "#000000",
-  "squad_size": 32,
-  "best_formation": "4-3-3",
-  "best_xi_average": 81.91,
-  "strength_rating": 83.41,
-  "strength_rank": 13
  },
  {
   "name": "Juventus",
@@ -177,9 +164,9 @@
   "secondary_color": "#FFFFFF",
   "squad_size": 29,
   "best_formation": "4-3-2-1",
-  "best_xi_average": 81.36,
-  "strength_rating": 82.86,
-  "strength_rank": 14
+  "best_xi_average": 81.45,
+  "strength_rating": 82.95,
+  "strength_rank": 13
  },
  {
   "name": "Tottenham Hotspur",
@@ -188,10 +175,23 @@
   "league_name": "Premier League",
   "primary_color": "#132257",
   "secondary_color": "#FFFFFF",
-  "squad_size": 37,
+  "squad_size": 39,
+  "best_formation": "4-3-3",
+  "best_xi_average": 81.18,
+  "strength_rating": 82.68,
+  "strength_rank": 14
+ },
+ {
+  "name": "AC Milan",
+  "short_name": "AC Milan",
+  "country": "Italy",
+  "league_name": "Serie A",
+  "primary_color": "#FB090B",
+  "secondary_color": "#000000",
+  "squad_size": 28,
   "best_formation": "4-3-2-1",
-  "best_xi_average": 81.0,
-  "strength_rating": 82.5,
+  "best_xi_average": 81.27,
+  "strength_rating": 82.37,
   "strength_rank": 15
  },
  {
@@ -201,10 +201,10 @@
   "league_name": "Premier League",
   "primary_color": "#670E36",
   "secondary_color": "#95BFE5",
-  "squad_size": 33,
+  "squad_size": 35,
   "best_formation": "4-3-3",
-  "best_xi_average": 81.27,
-  "strength_rating": 82.47,
+  "best_xi_average": 80.64,
+  "strength_rating": 82.04,
   "strength_rank": 16
  },
  {
@@ -214,10 +214,10 @@
   "league_name": "Premier League",
   "primary_color": "#241F20",
   "secondary_color": "#FFFFFF",
-  "squad_size": 28,
+  "squad_size": 29,
   "best_formation": "5-4-1",
-  "best_xi_average": 80.18,
-  "strength_rating": 81.38,
+  "best_xi_average": 80.45,
+  "strength_rating": 81.75,
   "strength_rank": 17
  },
  {
@@ -227,10 +227,10 @@
   "league_name": "Premier League",
   "primary_color": "#0057B8",
   "secondary_color": "#FFFFFF",
-  "squad_size": 34,
+  "squad_size": 36,
   "best_formation": "4-3-3",
-  "best_xi_average": 79.45,
-  "strength_rating": 80.95,
+  "best_xi_average": 79.27,
+  "strength_rating": 80.77,
   "strength_rank": 18
  },
  {

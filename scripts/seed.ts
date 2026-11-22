@@ -50,7 +50,8 @@ async function main(): Promise<number> {
     ] as const) {
       if (c.notInFile.length > 0) {
         console.warn(
-          `NOTE    ${c.notInFile.length} ${label} in the database are not in the seed files (left untouched):` +
+          `NOTE    ${c.notInFile.length} ${label} in the database are not in the seed files` +
+            (label === 'players' ? ` (${report.deactivatedPlayers} newly deactivated; kept for past games):` : ' (left untouched):') +
             c.notInFile.map((k) => `\n    ${k}`).join(''),
         );
       }

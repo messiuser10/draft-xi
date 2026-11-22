@@ -1,4 +1,30 @@
 ﻿club,name,position,overall,nationality
+Paris Saint-Germain,Ousmane Dembélé,ST,90,France
+Paris Saint-Germain,Vitinha,CM,90,Portugal
+Paris Saint-Germain,Khvicha Kvaratskhelia,LW,89,Georgia
+Paris Saint-Germain,Nuno Mendes,LB,89,Portugal
+Paris Saint-Germain,Willian Pacho,CB,89,Ecuador
+Paris Saint-Germain,Achraf Hakimi,RB,88,Morocco
+Paris Saint-Germain,João Neves,CM,88,Portugal
+Paris Saint-Germain,Marquinhos,CB,87,Brazil
+Paris Saint-Germain,Désiré Doué,RW,86,France
+Paris Saint-Germain,Fabián Ruiz,CM,86,Spain
+Paris Saint-Germain,Ferran Torres,ST,84,Spain
+Paris Saint-Germain,Matvey Safonov,GK,83,Russia
+Paris Saint-Germain,Warren Zaïre-Emery,CM,83,France
+Paris Saint-Germain,Lucas Hernández,CB,81,France
+Paris Saint-Germain,Maghnes Akliouche,CAM,81,France
+Paris Saint-Germain,Illia Zabarnyi,CB,80,Ukraine
+Paris Saint-Germain,Lucas Chevalier,GK,80,France
+Paris Saint-Germain,Lucas Digne,LB,80,France
+Paris Saint-Germain,Lucas Beraldo,CDM,79,Brazil
+Paris Saint-Germain,Senny Mayulu,CM,79,France
+Paris Saint-Germain,Mika Godts,LW,78,Belgium
+Paris Saint-Germain,Dro Fernández,CM,73,Spain
+Paris Saint-Germain,Quentin Ndjantou,LW,70,France
+Paris Saint-Germain,Alessandro Longoni,GK,65,Italy
+Paris Saint-Germain,Dimitri Lucea,CB,64,France
+Paris Saint-Germain,Yoram Zague,RB,64,France
 Real Madrid,Kylian Mbappé,ST,91,France
 Real Madrid,Jude Bellingham,CAM,90,England
 Real Madrid,Thibaut Courtois,GK,90,Belgium
@@ -31,130 +57,30 @@ Real Madrid,Cestero,CM,64,Spain
 Real Madrid,Daniel Yáñez,RW,64,Spain
 Real Madrid,Fortea,RB,63,Spain
 Real Madrid,Sergio Mestre,GK,60,Spain
-FC Barcelona,Lamine Yamal,RW,90,Spain
-FC Barcelona,Pedri,CM,90,Spain
-FC Barcelona,Rodri,CDM,90,Spain
-FC Barcelona,Raphinha,LW,88,Brazil
-FC Barcelona,Frenkie de Jong,CM,86,Netherlands
-FC Barcelona,Joan García,GK,86,Spain
-FC Barcelona,Pau Cubarsí,CB,86,Spain
-FC Barcelona,Eric García,CB,85,Spain
-FC Barcelona,Fermín,CAM,85,Spain
-FC Barcelona,Jules Koundé,RB,85,France
-FC Barcelona,Dani Olmo,CAM,84,Spain
-FC Barcelona,Gavi,CM,83,Spain
-FC Barcelona,João Cancelo,LB,83,Portugal
-FC Barcelona,Anthony Gordon,LW,82,England
-FC Barcelona,Balde,LB,82,Spain
-FC Barcelona,Karim Adeyemi,RM,82,Germany
-FC Barcelona,Wojciech Szczęsny,GK,81,Poland
-FC Barcelona,Andreas Christensen,CB,79,Denmark
-FC Barcelona,Gerard Martín,CB,79,Spain
-FC Barcelona,Marc Bernal,CDM,78,Spain
-FC Barcelona,Marc Casadó,CDM,78,Spain
-FC Barcelona,Roony Bardghji,RW,74,Sweden
-FC Barcelona,Héctor Fort,RB,72,Spain
-FC Barcelona,Jesse Eugen Bisiwu,LW,67,Belgium
-FC Barcelona,Xavi Espart,RB,67,Spain
-FC Barcelona,Álvaro Cortés,CB,66,Spain
-FC Barcelona,Hamza Abdelkarim,ST,65,Egypt
-FC Barcelona,Toni Fernández,RW,65,Spain
-FC Barcelona,Guille Fernández,CM,64,Spain
-Manchester United,Bruno Fernandes,CAM,89,Portugal
-Manchester United,Youri Tielemans,CM,85,Belgium
-Manchester United,Bryan Mbeumo,RM,84,Cameroon
-Manchester United,Matheus Cunha,LM,84,Brazil
-Manchester United,Benjamin Šeško,ST,82,Slovenia
-Manchester United,Harry Maguire,CB,82,England
-Manchester United,Lisandro Martínez,CB,82,Argentina
-Manchester United,Marcus Rashford,LW,82,England
-Manchester United,Matthijs de Ligt,CB,82,Netherlands
-Manchester United,Senne Lammens,GK,82,Belgium
-Manchester United,Kobbie Mainoo,CDM,81,England
-Manchester United,Andrey Santos,CM,80,Brazil
-Manchester United,Noussair Mazraoui,RB,80,Morocco
-Manchester United,Amad,RM,79,Côte d'Ivoire
-Manchester United,Luke Shaw,LB,79,England
-Manchester United,Diogo Dalot,RB,78,Portugal
-Manchester United,Leny Yoro,CB,78,France
-Manchester United,Mason Mount,CAM,78,England
-Manchester United,Patrick Dorgu,LM,78,Denmark
-Manchester United,Joshua Zirkzee,ST,77,Netherlands
-Manchester United,Manuel Ugarte,CDM,77,Uruguay
-Manchester United,Karl Darlow,GK,76,Wales
-Manchester United,Ayden Heaven,CB,75,England
-Manchester United,Toby Collyer,CDM,70,England
-Manchester United,Harry Amass,LB,69,England
-Manchester United,Tom Heaton,GK,67,England
-Manchester United,Daniel Gore,CM,66,England
-Manchester United,Chido Obi,ST,65,Denmark
-Manchester United,Shea Lacey,RM,65,England
-Manchester United,Tyler Fletcher,CM,65,Scotland
-Manchester United,Diego León,LB,64,Paraguay
-Manchester United,Ethan Wheatley,ST,63,England
-Manchester United,Jack Fletcher,CM,63,England
-Manchester United,Dermot Mee,GK,59,Northern Ireland
-Liverpool,Virgil van Dijk,CB,88,Netherlands
-Liverpool,Alisson,GK,87,Brazil
-Liverpool,Alexander Isak,ST,86,Sweden
-Liverpool,Dominik Szoboszlai,CAM,86,Hungary
-Liverpool,Florian Wirtz,CAM,86,Germany
-Liverpool,Hugo Ekitiké,ST,85,France
-Liverpool,Ryan Gravenberch,CDM,85,Netherlands
-Liverpool,Alexis Mac Allister,CM,84,Argentina
-Liverpool,Giorgi Mamardashvili,GK,83,Georgia
-Liverpool,Cody Gakpo,LM,82,Netherlands
-Liverpool,Jeremie Frimpong,RB,81,Netherlands
-Liverpool,Milos Kerkez,LB,81,Hungary
-Liverpool,Federico Chiesa,RM,80,Italy
-Liverpool,Ronald Araujo,CB,80,Uruguay
-Liverpool,Conor Bradley,RB,79,Northern Ireland
-Liverpool,Joe Gomez,CB,79,England
-Liverpool,Víctor Muñoz,LM,79,Spain
-Liverpool,Wataru Endo,CDM,78,Japan
-Liverpool,Harvey Elliott,CAM,77,England
-Liverpool,Jérémy Jacquet,CB,77,France
-Liverpool,Kostas Tsimikas,LB,76,Greece
-Liverpool,Rio Ngumoha,LM,75,England
-Liverpool,Stefan Bajcetic,CDM,72,Spain
-Liverpool,Vítězslav Jaroš,GK,72,Czech Republic
-Liverpool,Freddie Woodman,GK,71,England
-Liverpool,Giovanni Leoni,CB,71,Italy
-Liverpool,Lewis Koumas,LM,69,Wales
-Liverpool,James McConnell,CDM,68,England
-Liverpool,Trey Nyoni,CM,67,England
-Liverpool,Luke Chambers,LB,66,England
-Liverpool,Calvin Ramsay,RB,65,Scotland
-Liverpool,Harvey Davies,GK,61,England
-Paris Saint-Germain,Ousmane Dembélé,ST,90,France
-Paris Saint-Germain,Vitinha,CM,90,Portugal
-Paris Saint-Germain,Khvicha Kvaratskhelia,LW,89,Georgia
-Paris Saint-Germain,Nuno Mendes,LB,89,Portugal
-Paris Saint-Germain,Willian Pacho,CB,89,Ecuador
-Paris Saint-Germain,Achraf Hakimi,RB,88,Morocco
-Paris Saint-Germain,João Neves,CM,88,Portugal
-Paris Saint-Germain,Marquinhos,CB,87,Brazil
-Paris Saint-Germain,Désiré Doué,RW,86,France
-Paris Saint-Germain,Fabián Ruiz,CM,86,Spain
-Paris Saint-Germain,Bradley Barcola,LW,85,France
-Paris Saint-Germain,Ferran Torres,ST,84,Spain
-Paris Saint-Germain,Matvey Safonov,GK,83,Russia
-Paris Saint-Germain,Warren Zaïre-Emery,CM,83,France
-Paris Saint-Germain,Lucas Hernández,CB,81,France
-Paris Saint-Germain,Maghnes Akliouche,CAM,81,France
-Paris Saint-Germain,Illia Zabarnyi,CB,80,Ukraine
-Paris Saint-Germain,Lucas Chevalier,GK,80,France
-Paris Saint-Germain,Lucas Digne,LB,80,France
-Paris Saint-Germain,Lucas Beraldo,CDM,79,Brazil
-Paris Saint-Germain,Senny Mayulu,CM,79,France
-Paris Saint-Germain,Mika Godts,LW,78,Belgium
-Paris Saint-Germain,Ibrahim Mbaye,RW,76,Senegal
-Paris Saint-Germain,Renato Sanches,CM,75,Portugal
-Paris Saint-Germain,Dro Fernández,CM,73,Spain
-Paris Saint-Germain,Quentin Ndjantou,LW,70,France
-Paris Saint-Germain,Alessandro Longoni,GK,65,Italy
-Paris Saint-Germain,Dimitri Lucea,CB,64,France
-Paris Saint-Germain,Yoram Zague,RB,64,France
+Arsenal,Gabriel,CB,89,Brazil
+Arsenal,David Raya,GK,88,Spain
+Arsenal,Declan Rice,CDM,88,England
+Arsenal,William Saliba,CB,88,France
+Arsenal,Bukayo Saka,RW,87,England
+Arsenal,Bruno Guimarães,CM,86,Brazil
+Arsenal,Martin Ødegaard,CM,86,Norway
+Arsenal,Viktor Gyökeres,ST,86,Sweden
+Arsenal,Eberechi Eze,CAM,84,England
+Arsenal,Ezri Konsa,CB,84,England
+Arsenal,Jurriën Timber,RB,84,Netherlands
+Arsenal,Piero Hincapié,LB,84,Ecuador
+Arsenal,Zubimendi,CDM,84,Spain
+Arsenal,Mikel Merino,CM,83,Spain
+Arsenal,Christos Tzolis,LW,82,Greece
+Arsenal,Riccardo Calafiori,LB,82,Italy
+Arsenal,Benjamin White,RB,81,England
+Arsenal,Kai Havertz,ST,81,Germany
+Arsenal,Noni Madueke,RW,80,England
+Arsenal,Cristhian Mosquera,CB,78,Spain
+Arsenal,Kepa,GK,78,Spain
+Arsenal,Myles Lewis-Skelly,LB,78,England
+Arsenal,Illan Meslier,GK,71,France
+Arsenal,Tommy Setford,GK,63,England
 Bayern Munich,Harry Kane,ST,90,England
 Bayern Munich,Michael Olise,RM,90,France
 Bayern Munich,Joshua Kimmich,CDM,88,Germany
@@ -187,6 +113,7 @@ Bayern Munich,Santos Daiber,CDM,59,Portugal
 Manchester City,Erling Haaland,ST,91,Norway
 Manchester City,Gianluigi Donnarumma,GK,89,Italy
 Manchester City,Rúben Dias,CB,87,Portugal
+Manchester City,Enzo Fernández,CM,86,Argentina
 Manchester City,Rayan Cherki,RW,86,France
 Manchester City,Antoine Semenyo,RW,85,Ghana
 Manchester City,Joško Gvardiol,CB,85,Croatia
@@ -197,13 +124,11 @@ Manchester City,Phil Foden,CAM,84,England
 Manchester City,Matheus Nunes,RB,83,Portugal
 Manchester City,Nico O'Reilly,LB,83,England
 Manchester City,Abdukodir Khusanov,CB,82,Uzbekistan
-Manchester City,Jack Grealish,LM,82,England
-Manchester City,Omar Marmoush,LW,82,Egypt
+Manchester City,Iliman Ndiaye,LM,82,Senegal
 Manchester City,Mateo Kovačić,CM,81,Croatia
-Manchester City,Nico González,CDM,81,Spain
 Manchester City,Rayan Aït-Nouri,LB,81,Algeria
+Manchester City,Ayyoub Bouaddi,CDM,80,France
 Manchester City,Gerónimo Rulli,GK,80,Argentina
-Manchester City,Savinho,RW,80,Brazil
 Manchester City,Rico Lewis,RB,77,England
 Manchester City,Vitor Reis,CB,76,Brazil
 Manchester City,Claudio Echeverri,CAM,73,Argentina
@@ -214,231 +139,68 @@ Manchester City,Stephen Mfuni,CB,69,England
 Manchester City,Jeremy Monga,LW,67,England
 Manchester City,Joshua Wilson-Esbrand,LB,66,England
 Manchester City,Jaden Heskey,CM,65,England
-Arsenal,Gabriel,CB,89,Brazil
-Arsenal,David Raya,GK,88,Spain
-Arsenal,Declan Rice,CDM,88,England
-Arsenal,William Saliba,CB,88,France
-Arsenal,Bukayo Saka,RW,87,England
-Arsenal,Bruno Guimarães,CM,86,Brazil
-Arsenal,Martin Ødegaard,CM,86,Norway
-Arsenal,Viktor Gyökeres,ST,86,Sweden
-Arsenal,Eberechi Eze,CAM,84,England
-Arsenal,Ezri Konsa,CB,84,England
-Arsenal,Jurriën Timber,RB,84,Netherlands
-Arsenal,Piero Hincapié,LB,84,Ecuador
-Arsenal,Zubimendi,CDM,84,Spain
-Arsenal,Mikel Merino,CM,83,Spain
-Arsenal,Christos Tzolis,LW,82,Greece
-Arsenal,Riccardo Calafiori,LB,82,Italy
-Arsenal,Benjamin White,RB,81,England
-Arsenal,Kai Havertz,ST,81,Germany
-Arsenal,Gabriel Martinelli,LW,80,Brazil
-Arsenal,Noni Madueke,RW,80,England
-Arsenal,Gabriel Jesus,ST,79,Brazil
-Arsenal,Cristhian Mosquera,CB,78,Spain
-Arsenal,Fábio Vieira,CAM,78,Portugal
-Arsenal,Kepa,GK,78,Spain
-Arsenal,Myles Lewis-Skelly,LB,78,England
-Arsenal,Ethan Nwaneri,RW,75,England
-Arsenal,Reiss Nelson,RM,75,England
-Arsenal,Illan Meslier,GK,71,France
-Arsenal,Tommy Setford,GK,63,England
-Chelsea,Enzo Fernández,CM,86,Argentina
-Chelsea,Moisés Caicedo,CDM,86,Ecuador
-Chelsea,Cole Palmer,CAM,85,England
-Chelsea,Morgan Rogers,CAM,84,England
-Chelsea,Reece James,RB,84,England
-Chelsea,João Pedro,ST,83,Brazil
-Chelsea,Maxence Lacroix,CB,82,France
-Chelsea,Pedro Neto,RM,81,Portugal
-Chelsea,Danny Welbeck,ST,80,England
-Chelsea,Estêvão,RM,80,Brazil
-Chelsea,Levi Colwill,CB,80,England
-Chelsea,Robert Sánchez,GK,80,Spain
-Chelsea,Malo Gusto,RB,79,France
-Chelsea,Nicolas Jackson,ST,79,Senegal
-Chelsea,Pep Chavarría,LB,79,Spain
-Chelsea,Valentín Barco,CM,79,Argentina
-Chelsea,Wesley Fofana,CB,79,France
-Chelsea,Emanuel Emegha,ST,78,Netherlands
-Chelsea,Jordan Henderson,CDM,78,England
-Chelsea,Jorrel Hato,LB,78,Netherlands
-Chelsea,Marco Palestra,RB,78,Italy
-Chelsea,Mike Penders,GK,78,Belgium
-Chelsea,Roméo Lavia,CDM,78,Belgium
-Chelsea,Axel Disasi,CB,77,France
-Chelsea,Jamie Gittens,LM,77,England
-Chelsea,Liam Delap,ST,77,England
-Chelsea,Mamadou Sarr,CB,77,Senegal
-Chelsea,Tosin Adarabioyo,CB,77,England
-Chelsea,Geovany Quenda,RM,76,Portugal
-Chelsea,Dário Essugo,CDM,75,Portugal
-Chelsea,Josh Acheampong,CB,75,England
-Chelsea,Mykhailo Mudryk,LM,75,Ukraine
-Chelsea,Aarón Anselmino,CB,72,Argentina
-Chelsea,David Datro Fofana,ST,72,Côte d'Ivoire
-Chelsea,Marc Guiu,ST,71,Spain
-Chelsea,Gabriel Slonina,GK,68,United States
-Chelsea,Shumaira Mheuka,ST,66,England
-Chelsea,Teddy Sharman-Lowe,GK,64,England
-Tottenham Hotspur,Sandro Tonali,CDM,85,Italy
-Tottenham Hotspur,Pedro Porro,RB,83,Spain
-Tottenham Hotspur,James Maddison,CM,82,England
-Tottenham Hotspur,Marcos Senesi,CB,82,Argentina
-Tottenham Hotspur,Dejan Kulusevski,CM,81,Sweden
-Tottenham Hotspur,Jan Paul van Hecke,CB,81,Netherlands
-Tottenham Hotspur,Micky van de Ven,CB,81,Netherlands
-Tottenham Hotspur,Mohammed Kudus,RM,81,Ghana
-Tottenham Hotspur,Xavi Simons,CAM,81,Netherlands
-Tottenham Hotspur,Andrew Robertson,LB,80,Scotland
-Tottenham Hotspur,Mateus Fernandes,CM,80,Portugal
-Tottenham Hotspur,Destiny Udogie,LB,79,Italy
-Tottenham Hotspur,Dominic Solanke,ST,79,England
-Tottenham Hotspur,Kevin Danso,CB,79,Austria
-Tottenham Hotspur,Pape Matar Sarr,CM,79,Senegal
-Tottenham Hotspur,Rodrigo Bentancur,CDM,79,Uruguay
-Tottenham Hotspur,Conor Gallagher,CM,78,England
-Tottenham Hotspur,Lucas Bergvall,CM,78,Sweden
-Tottenham Hotspur,Mathys Tel,LM,78,France
-Tottenham Hotspur,Richarlison,ST,78,Brazil
-Tottenham Hotspur,Wilson Odobert,LM,78,France
-Tottenham Hotspur,Antonín Kinský,GK,77,Czech Republic
-Tottenham Hotspur,Archie Gray,CDM,77,England
-Tottenham Hotspur,Martin Dúbravka,GK,77,Slovakia
-Tottenham Hotspur,Ben Davies,CB,74,Wales
-Tottenham Hotspur,Mikey Moore,LW,74,England
-Tottenham Hotspur,Kota Takai,CB,72,Japan
-Tottenham Hotspur,Souza,LB,70,Brazil
-Tottenham Hotspur,Brandon Austin,GK,67,England
-Tottenham Hotspur,Jamie Donley,CAM,67,Northern Ireland
-Tottenham Hotspur,George Abbott,CM,66,England
-Tottenham Hotspur,Dane Scarlett,ST,65,England
-Tottenham Hotspur,Oliver Irow,LM,64,England
-Tottenham Hotspur,Tyrese Hall,CAM,64,Jamaica
-Tottenham Hotspur,Alfie Dorrington,CB,62,England
-Tottenham Hotspur,Callum Olusesi,CM,62,England
-Tottenham Hotspur,Jun'ai Byfield,CB,62,England
-Atlético Madrid,Jan Oblak,GK,88,Slovenia
-Atlético Madrid,Julián Alvarez,ST,86,Argentina
-Atlético Madrid,Grimaldo,LM,85,Spain
-Atlético Madrid,Marcos Llorente,RB,85,Spain
-Atlético Madrid,Ademola Lookman,ST,83,Nigeria
-Atlético Madrid,Alexander Sørloth,ST,83,Norway
-Atlético Madrid,Dávid Hancko,CB,83,Slovakia
-Atlético Madrid,Morten Hjulmand,CDM,83,Denmark
-Atlético Madrid,Pablo Barrios,CM,83,Spain
-Atlético Madrid,Álex Baena,LM,83,Spain
-Atlético Madrid,Cristian Romero,CB,82,Argentina
-Atlético Madrid,Giuliano,RM,82,Argentina
-Atlético Madrid,José María Giménez,CB,82,Uruguay
-Atlético Madrid,Juan Musso,GK,82,Argentina
-Atlético Madrid,Koke,CM,81,Spain
-Atlético Madrid,Pubill,CB,81,Spain
-Atlético Madrid,Robin Le Normand,CB,81,Spain
-Atlético Madrid,Johnny Cardoso,CDM,80,United States
-Atlético Madrid,Lee Kang In,RW,80,South Korea
-Atlético Madrid,Thomas Lemar,CM,77,France
-Atlético Madrid,Obed Vargas,CDM,72,Mexico
-Atlético Madrid,Rodri Mendoza,CM,71,Spain
-Atlético Madrid,Carlos Martín,LW,70,Spain
-Atlético Madrid,Arnau Ortiz,LM,69,Spain
-Atlético Madrid,Aleksa Purić,CB,67,Serbia
-Atlético Madrid,Javi Boñar,RB,65,Spain
-Atlético Madrid,Iker Luque,RW,64,Spain
-Atlético Madrid,Rayane Belaid,CAM,64,Spain
-Atlético Madrid,Salvi Esquivel,GK,64,Spain
-Atlético Madrid,Dani Martinez,CB,63,Spain
-Atlético Madrid,Miguel Cubo,ST,63,Spain
-Juventus,Bremer,CB,86,Brazil
-Juventus,Kenan Yıldız,CAM,84,Turkey
-Juventus,Manuel Locatelli,CDM,84,Italy
-Juventus,Khéphren Thuram,CM,81,France
-Juventus,Pierre Kalulu,CB,81,France
-Juventus,Andrea Cambiaso,LB,80,Italy
-Juventus,Francisco Conceição,CAM,80,Portugal
-Juventus,Guglielmo Vicario,GK,80,Italy
-Juventus,Jonathan David,ST,80,Canada
-Juventus,Michele Di Gregorio,GK,80,Italy
-Juventus,Weston McKennie,CM,80,United States
-Juventus,Federico Gatti,CB,79,Italy
-Juventus,Nico González,LM,79,Argentina
-Juventus,Zeki Çelik,RB,79,Turkey
-Juventus,Douglas Luiz,CDM,78,Brazil
-Juventus,Edon Zhegrova,RM,78,Kosovo
-Juventus,Jérémie Boga,CAM,78,Côte d'Ivoire
-Juventus,Teun Koopmeiners,CAM,78,Netherlands
-Juventus,Lloyd Kelly,CB,77,England
-Juventus,Randal Kolo Muani,ST,77,France
-Juventus,Arkadiusz Milik,ST,76,Poland
-Juventus,Jhon Lucumí,CB,76,Colombia
-Juventus,Mattia Perin,GK,76,Italy
-Juventus,Fabio Miretti,CM,75,Italy
-Juventus,Daniele Rugani,CB,74,Italy
-Juventus,Juan David Cabal,LB,74,Colombia
-Juventus,Kerim Alajbegović,CAM,71,Bosnia and Herzegovina
-Juventus,Carlo Pinsoglio,GK,68,Italy
-Juventus,Jeff Ekhator,ST,68,Italy
-Borussia Dortmund,Gregor Kobel,GK,87,Switzerland
-Borussia Dortmund,Nico Schlotterbeck,CB,87,Germany
-Borussia Dortmund,Felix Nmecha,CM,85,Germany
-Borussia Dortmund,Serhou Guirassy,ST,85,Guinea
-Borussia Dortmund,Waldemar Anton,CB,84,Germany
-Borussia Dortmund,Joey Veerman,CM,82,Netherlands
-Borussia Dortmund,Julian Ryerson,RB,82,Norway
-Borussia Dortmund,Emre Can,CB,81,Germany
-Borussia Dortmund,Marcel Sabitzer,CM,81,Austria
-Borussia Dortmund,Maximilian Beier,CAM,81,Germany
-Borussia Dortmund,Daniel Svensson,LB,79,Sweden
-Borussia Dortmund,Giannis Konstantelias,CAM,79,Greece
-Borussia Dortmund,Ramy Bensebaini,CB,79,Algeria
-Borussia Dortmund,Carney Chukwuemeka,CAM,78,Austria
-Borussia Dortmund,Fábio Silva,ST,78,Portugal
-Borussia Dortmund,Jobe Bellingham,CM,77,England
-Borussia Dortmund,Konstantinos Karetsas,CAM,76,Greece
-Borussia Dortmund,Alexander Meyer,GK,74,Germany
-Borussia Dortmund,Patrick Drewes,GK,71,Germany
-Borussia Dortmund,Samuele Inácio,CAM,70,Italy
-Borussia Dortmund,Joane Gadou,CB,68,France
-Borussia Dortmund,Kauã Prates,LB,67,Brazil
-Borussia Dortmund,Luca Reggiani,CB,67,Italy
-Borussia Dortmund,Justin Lerma,CAM,66,Ecuador
-Borussia Dortmund,Mathis Albert,LM,66,United States
-Borussia Dortmund,Filippo Mané,CB,65,Italy
-Borussia Dortmund,Silas Ostrzinski,GK,63,Germany
-Borussia Dortmund,Mussa Kaba,CDM,62,Germany
-Borussia Dortmund,Enzo dos Santos,CM,61,Luxembourg
-AC Milan,Mike Maignan,GK,87,France
-AC Milan,Adrien Rabiot,CM,85,France
-AC Milan,Luka Modrić,CM,85,Croatia
-AC Milan,Christian Pulisic,CAM,83,United States
-AC Milan,Rafael Leão,LW,83,Portugal
-AC Milan,Mario Gila,CB,81,Spain
-AC Milan,Alexis Saelemaekers,RB,80,Belgium
-AC Milan,Christopher Nkunku,ST,80,France
-AC Milan,Fikayo Tomori,CB,80,England
-AC Milan,Gonçalo Ramos,ST,80,Portugal
-AC Milan,Matteo Gabbia,CB,80,Italy
-AC Milan,Youssouf Fofana,CM,80,France
-AC Milan,Diego Moreira,RM,79,Belgium
-AC Milan,Ruben Loftus-Cheek,CAM,79,England
-AC Milan,Pervis Estupiñán,LB,78,Ecuador
-AC Milan,Samuel Chukwueze,RM,78,Nigeria
-AC Milan,Samuele Ricci,CM,78,Italy
-AC Milan,Santiago Giménez,ST,78,Mexico
-AC Milan,Strahinja Pavlović,CB,78,Serbia
-AC Milan,Ardon Jashari,CDM,76,Switzerland
-AC Milan,Pietro Terracciano,GK,76,Italy
-AC Milan,Koni De Winter,CB,75,Belgium
-AC Milan,Davide Bartesaghi,LB,74,Italy
-AC Milan,Yunus Musah,CM,73,United States
-AC Milan,Filippo Terracciano,CB,71,Italy
-AC Milan,Warren Bondo,CDM,70,France
-AC Milan,Sankhoun Diawara,CB,69,France
-AC Milan,Alphadjo Cissè,CAM,66,Italy
-AC Milan,Francesco Camarda,ST,66,Italy
-AC Milan,Kevin Zeroli,CM,66,Italy
-AC Milan,Christian Comotto,CM,65,Italy
-AC Milan,Lorenzo Torriani,GK,62,Italy
+FC Barcelona,Lamine Yamal,RW,90,Spain
+FC Barcelona,Pedri,CM,90,Spain
+FC Barcelona,Rodri,CDM,90,Spain
+FC Barcelona,Raphinha,LW,88,Brazil
+FC Barcelona,Frenkie de Jong,CM,86,Netherlands
+FC Barcelona,Joan García,GK,86,Spain
+FC Barcelona,Pau Cubarsí,CB,86,Spain
+FC Barcelona,Eric García,CB,85,Spain
+FC Barcelona,Fermín,CAM,85,Spain
+FC Barcelona,Jules Koundé,RB,85,France
+FC Barcelona,Dani Olmo,CAM,84,Spain
+FC Barcelona,Gavi,CM,83,Spain
+FC Barcelona,João Cancelo,LB,83,Portugal
+FC Barcelona,Anthony Gordon,LW,82,England
+FC Barcelona,Balde,LB,82,Spain
+FC Barcelona,Karim Adeyemi,RM,82,Germany
+FC Barcelona,Wojciech Szczęsny,GK,81,Poland
+FC Barcelona,Andreas Christensen,CB,79,Denmark
+FC Barcelona,Gabriel Jesus,ST,79,Brazil
+FC Barcelona,Gerard Martín,CB,79,Spain
+FC Barcelona,Marc Bernal,CDM,78,Spain
+FC Barcelona,Marc Casadó,CDM,78,Spain
+FC Barcelona,Roony Bardghji,RW,74,Sweden
+FC Barcelona,Héctor Fort,RB,72,Spain
+FC Barcelona,Jesse Eugen Bisiwu,LW,67,Belgium
+FC Barcelona,Xavi Espart,RB,67,Spain
+FC Barcelona,Álvaro Cortés,CB,66,Spain
+FC Barcelona,Hamza Abdelkarim,ST,65,Egypt
+FC Barcelona,Toni Fernández,RW,65,Spain
+FC Barcelona,Guille Fernández,CM,64,Spain
+Liverpool,Virgil van Dijk,CB,88,Netherlands
+Liverpool,Alisson,GK,87,Brazil
+Liverpool,Alexander Isak,ST,86,Sweden
+Liverpool,Dominik Szoboszlai,CAM,86,Hungary
+Liverpool,Florian Wirtz,CAM,86,Germany
+Liverpool,Bradley Barcola,LW,85,France
+Liverpool,Hugo Ekitiké,ST,85,France
+Liverpool,Ryan Gravenberch,CDM,85,Netherlands
+Liverpool,Alexis Mac Allister,CM,84,Argentina
+Liverpool,Giorgi Mamardashvili,GK,83,Georgia
+Liverpool,Cody Gakpo,LM,82,Netherlands
+Liverpool,Jeremie Frimpong,RB,81,Netherlands
+Liverpool,Milos Kerkez,LB,81,Hungary
+Liverpool,Federico Chiesa,RM,80,Italy
+Liverpool,Ronald Araujo,CB,80,Uruguay
+Liverpool,Conor Bradley,RB,79,Northern Ireland
+Liverpool,Joe Gomez,CB,79,England
+Liverpool,Víctor Muñoz,LM,79,Spain
+Liverpool,Wataru Endo,CDM,78,Japan
+Liverpool,Jérémy Jacquet,CB,77,France
+Liverpool,Kostas Tsimikas,LB,76,Greece
+Liverpool,Rio Ngumoha,LM,75,England
+Liverpool,Stefan Bajcetic,CDM,72,Spain
+Liverpool,Vítězslav Jaroš,GK,72,Czech Republic
+Liverpool,Freddie Woodman,GK,71,England
+Liverpool,Giovanni Leoni,CB,71,Italy
+Liverpool,Lewis Koumas,LM,69,Wales
+Liverpool,James McConnell,CDM,68,England
+Liverpool,Trey Nyoni,CM,67,England
+Liverpool,Luke Chambers,LB,66,England
+Liverpool,Calvin Ramsay,RB,65,Scotland
+Liverpool,Harvey Davies,GK,61,England
 Inter Milan,Lautaro Martínez,ST,87,Argentina
 Inter Milan,Nicolò Barella,CM,87,Italy
 Inter Milan,Alessandro Bastoni,CB,86,Italy
@@ -466,16 +228,241 @@ Inter Milan,Kristjan Asllani,CDM,73,Albania
 Inter Milan,Raffaele Di Gennaro,GK,68,Italy
 Inter Milan,Yanis Massolin,CM,68,France
 Inter Milan,Luka Topalovič,CM,65,Slovenia
-Aston Villa,Emiliano Martínez,GK,85,Argentina
+Atlético Madrid,Jan Oblak,GK,88,Slovenia
+Atlético Madrid,Julián Alvarez,ST,86,Argentina
+Atlético Madrid,Grimaldo,LM,85,Spain
+Atlético Madrid,Marcos Llorente,RB,85,Spain
+Atlético Madrid,Ademola Lookman,ST,83,Nigeria
+Atlético Madrid,Alexander Sørloth,ST,83,Norway
+Atlético Madrid,Dávid Hancko,CB,83,Slovakia
+Atlético Madrid,Morten Hjulmand,CDM,83,Denmark
+Atlético Madrid,Pablo Barrios,CM,83,Spain
+Atlético Madrid,Álex Baena,LM,83,Spain
+Atlético Madrid,Cristian Romero,CB,82,Argentina
+Atlético Madrid,Giuliano,RM,82,Argentina
+Atlético Madrid,Juan Musso,GK,82,Argentina
+Atlético Madrid,Koke,CM,81,Spain
+Atlético Madrid,Pubill,CB,81,Spain
+Atlético Madrid,Robin Le Normand,CB,81,Spain
+Atlético Madrid,Johnny Cardoso,CDM,80,United States
+Atlético Madrid,Jonathan David,ST,80,Canada
+Atlético Madrid,Lee Kang In,RW,80,South Korea
+Atlético Madrid,Thomas Lemar,CM,77,France
+Atlético Madrid,Obed Vargas,CDM,72,Mexico
+Atlético Madrid,Rodri Mendoza,CM,71,Spain
+Atlético Madrid,Carlos Martín,LW,70,Spain
+Atlético Madrid,Arnau Ortiz,LM,69,Spain
+Atlético Madrid,Aleksa Purić,CB,67,Serbia
+Atlético Madrid,Javi Boñar,RB,65,Spain
+Atlético Madrid,Iker Luque,RW,64,Spain
+Atlético Madrid,Rayane Belaid,CAM,64,Spain
+Atlético Madrid,Salvi Esquivel,GK,64,Spain
+Atlético Madrid,Dani Martinez,CB,63,Spain
+Atlético Madrid,Miguel Cubo,ST,63,Spain
+Manchester United,Bruno Fernandes,CAM,89,Portugal
+Manchester United,Youri Tielemans,CM,85,Belgium
+Manchester United,Bryan Mbeumo,RM,84,Cameroon
+Manchester United,Matheus Cunha,LM,84,Brazil
+Manchester United,Benjamin Šeško,ST,82,Slovenia
+Manchester United,Harry Maguire,CB,82,England
+Manchester United,Lisandro Martínez,CB,82,Argentina
+Manchester United,Marcus Rashford,LW,82,England
+Manchester United,Matthijs de Ligt,CB,82,Netherlands
+Manchester United,Senne Lammens,GK,82,Belgium
+Manchester United,Kobbie Mainoo,CDM,81,England
+Manchester United,Andrey Santos,CM,80,Brazil
+Manchester United,Carlos Baleba,CDM,80,Cameroon
+Manchester United,Noussair Mazraoui,RB,80,Morocco
+Manchester United,Amad,RM,79,Côte d'Ivoire
+Manchester United,Luke Shaw,LB,79,England
+Manchester United,Diogo Dalot,RB,78,Portugal
+Manchester United,Leny Yoro,CB,78,France
+Manchester United,Mason Mount,CAM,78,England
+Manchester United,Patrick Dorgu,LM,78,Denmark
+Manchester United,Joshua Zirkzee,ST,77,Netherlands
+Manchester United,Manuel Ugarte,CDM,77,Uruguay
+Manchester United,Karl Darlow,GK,76,Wales
+Manchester United,Ayden Heaven,CB,75,England
+Manchester United,Toby Collyer,CDM,70,England
+Manchester United,Harry Amass,LB,69,England
+Manchester United,Tom Heaton,GK,67,England
+Manchester United,Daniel Gore,CM,66,England
+Manchester United,Chido Obi,ST,65,Denmark
+Manchester United,Shea Lacey,RM,65,England
+Manchester United,Tyler Fletcher,CM,65,Scotland
+Manchester United,Diego León,LB,64,Paraguay
+Manchester United,Ethan Wheatley,ST,63,England
+Manchester United,Jack Fletcher,CM,63,England
+Manchester United,Dermot Mee,GK,59,Northern Ireland
+Chelsea,Moisés Caicedo,CDM,86,Ecuador
+Chelsea,Cole Palmer,CAM,85,England
+Chelsea,Emiliano Martínez,GK,85,Argentina
+Chelsea,Morgan Rogers,CAM,84,England
+Chelsea,Reece James,RB,84,England
+Chelsea,João Pedro,ST,83,Brazil
+Chelsea,Maxence Lacroix,CB,82,France
+Chelsea,Pedro Neto,RM,81,Portugal
+Chelsea,Danny Welbeck,ST,80,England
+Chelsea,Estêvão,RM,80,Brazil
+Chelsea,Levi Colwill,CB,80,England
+Chelsea,Malo Gusto,RB,79,France
+Chelsea,Pep Chavarría,LB,79,Spain
+Chelsea,Valentín Barco,CM,79,Argentina
+Chelsea,Wesley Fofana,CB,79,France
+Chelsea,Emanuel Emegha,ST,78,Netherlands
+Chelsea,Jordan Henderson,CDM,78,England
+Chelsea,Jorrel Hato,LB,78,Netherlands
+Chelsea,Marco Palestra,RB,78,Italy
+Chelsea,Mike Penders,GK,78,Belgium
+Chelsea,Roméo Lavia,CDM,78,Belgium
+Chelsea,Jamie Gittens,LM,77,England
+Chelsea,Mamadou Sarr,CB,77,Senegal
+Chelsea,Geovany Quenda,RM,76,Portugal
+Chelsea,Dário Essugo,CDM,75,Portugal
+Chelsea,Josh Acheampong,CB,75,England
+Chelsea,Aarón Anselmino,CB,72,Argentina
+Chelsea,David Datro Fofana,ST,72,Côte d'Ivoire
+Chelsea,Marc Guiu,ST,71,Spain
+Chelsea,Gabriel Slonina,GK,68,United States
+Chelsea,Shumaira Mheuka,ST,66,England
+Chelsea,Teddy Sharman-Lowe,GK,64,England
+Borussia Dortmund,Gregor Kobel,GK,87,Switzerland
+Borussia Dortmund,Nico Schlotterbeck,CB,87,Germany
+Borussia Dortmund,Felix Nmecha,CM,85,Germany
+Borussia Dortmund,Serhou Guirassy,ST,85,Guinea
+Borussia Dortmund,Waldemar Anton,CB,84,Germany
+Borussia Dortmund,Joey Veerman,CM,82,Netherlands
+Borussia Dortmund,Julian Ryerson,RB,82,Norway
+Borussia Dortmund,Emre Can,CB,81,Germany
+Borussia Dortmund,Marcel Sabitzer,CM,81,Austria
+Borussia Dortmund,Maximilian Beier,CAM,81,Germany
+Borussia Dortmund,Daniel Svensson,LB,79,Sweden
+Borussia Dortmund,Giannis Konstantelias,CAM,79,Greece
+Borussia Dortmund,Ramy Bensebaini,CB,79,Algeria
+Borussia Dortmund,Carney Chukwuemeka,CAM,78,Austria
+Borussia Dortmund,Fábio Silva,ST,78,Portugal
+Borussia Dortmund,Jobe Bellingham,CM,77,England
+Borussia Dortmund,Konstantinos Karetsas,CAM,76,Greece
+Borussia Dortmund,Ethan Nwaneri,RW,75,England
+Borussia Dortmund,Alexander Meyer,GK,74,Germany
+Borussia Dortmund,Patrick Drewes,GK,71,Germany
+Borussia Dortmund,Samuele Inácio,CAM,70,Italy
+Borussia Dortmund,Joane Gadou,CB,68,France
+Borussia Dortmund,Kauã Prates,LB,67,Brazil
+Borussia Dortmund,Luca Reggiani,CB,67,Italy
+Borussia Dortmund,Justin Lerma,CAM,66,Ecuador
+Borussia Dortmund,Mathis Albert,LM,66,United States
+Borussia Dortmund,Filippo Mané,CB,65,Italy
+Borussia Dortmund,Silas Ostrzinski,GK,63,Germany
+Borussia Dortmund,Mussa Kaba,CDM,62,Germany
+Borussia Dortmund,Enzo dos Santos,CM,61,Luxembourg
+AC Milan,Mike Maignan,GK,87,France
+AC Milan,Adrien Rabiot,CM,85,France
+AC Milan,Luka Modrić,CM,85,Croatia
+AC Milan,Christian Pulisic,CAM,83,United States
+AC Milan,Mario Gila,CB,81,Spain
+AC Milan,Alexis Saelemaekers,RB,80,Belgium
+AC Milan,Fikayo Tomori,CB,80,England
+AC Milan,Gonçalo Ramos,ST,80,Portugal
+AC Milan,Matteo Gabbia,CB,80,Italy
+AC Milan,Diego Moreira,RM,79,Belgium
+AC Milan,Ruben Loftus-Cheek,CAM,79,England
+AC Milan,Pervis Estupiñán,LB,78,Ecuador
+AC Milan,Samuel Chukwueze,RM,78,Nigeria
+AC Milan,Strahinja Pavlović,CB,78,Serbia
+AC Milan,Ardon Jashari,CDM,76,Switzerland
+AC Milan,Omari Hutchinson,RM,76,England
+AC Milan,Pietro Terracciano,GK,76,Italy
+AC Milan,Koni De Winter,CB,75,Belgium
+AC Milan,Davide Bartesaghi,LB,74,Italy
+AC Milan,Yunus Musah,CM,73,United States
+AC Milan,Filippo Terracciano,CB,71,Italy
+AC Milan,Warren Bondo,CDM,70,France
+AC Milan,Sankhoun Diawara,CB,69,France
+AC Milan,Alphadjo Cissè,CAM,66,Italy
+AC Milan,Francesco Camarda,ST,66,Italy
+AC Milan,Kevin Zeroli,CM,66,Italy
+AC Milan,Christian Comotto,CM,65,Italy
+AC Milan,Lorenzo Torriani,GK,62,Italy
+Juventus,Bremer,CB,86,Brazil
+Juventus,Kenan Yıldız,CAM,84,Turkey
+Juventus,Manuel Locatelli,CDM,84,Italy
+Juventus,Kamil Grabara,GK,81,Denmark
+Juventus,Khéphren Thuram,CM,81,France
+Juventus,Pierre Kalulu,CB,81,France
+Juventus,Andrea Cambiaso,LB,80,Italy
+Juventus,Francisco Conceição,CAM,80,Portugal
+Juventus,Guglielmo Vicario,GK,80,Italy
+Juventus,Nick Woltemade,ST,80,Germany
+Juventus,Weston McKennie,CM,80,United States
+Juventus,Federico Gatti,CB,79,Italy
+Juventus,Nico González,LM,79,Argentina
+Juventus,Pape Matar Sarr,CM,79,Senegal
+Juventus,Zeki Çelik,RB,79,Turkey
+Juventus,Douglas Luiz,CDM,78,Brazil
+Juventus,Edon Zhegrova,RM,78,Kosovo
+Juventus,Jérémie Boga,CAM,78,Côte d'Ivoire
+Juventus,Teun Koopmeiners,CAM,78,Netherlands
+Juventus,Lloyd Kelly,CB,77,England
+Juventus,Randal Kolo Muani,ST,77,France
+Juventus,Arkadiusz Milik,ST,76,Poland
+Juventus,Jhon Lucumí,CB,76,Colombia
+Juventus,Mattia Perin,GK,76,Italy
+Juventus,Daniele Rugani,CB,74,Italy
+Juventus,Juan David Cabal,LB,74,Colombia
+Juventus,Kerim Alajbegović,CAM,71,Bosnia and Herzegovina
+Juventus,Carlo Pinsoglio,GK,68,Italy
+Juventus,Jeff Ekhator,ST,68,Italy
+Tottenham Hotspur,Sandro Tonali,CDM,85,Italy
+Tottenham Hotspur,Pedro Porro,RB,83,Spain
+Tottenham Hotspur,James Maddison,CM,82,England
+Tottenham Hotspur,Marcos Senesi,CB,82,Argentina
+Tottenham Hotspur,Omar Marmoush,LW,82,Egypt
+Tottenham Hotspur,Dejan Kulusevski,CM,81,Sweden
+Tottenham Hotspur,Jan Paul van Hecke,CB,81,Netherlands
+Tottenham Hotspur,Micky van de Ven,CB,81,Netherlands
+Tottenham Hotspur,Mohammed Kudus,RM,81,Ghana
+Tottenham Hotspur,Xavi Simons,CAM,81,Netherlands
+Tottenham Hotspur,Andrew Robertson,LB,80,Scotland
+Tottenham Hotspur,Mateus Fernandes,CM,80,Portugal
+Tottenham Hotspur,Savinho,RW,80,Brazil
+Tottenham Hotspur,Destiny Udogie,LB,79,Italy
+Tottenham Hotspur,Dominic Solanke,ST,79,England
+Tottenham Hotspur,Rodrigo Bentancur,CDM,79,Uruguay
+Tottenham Hotspur,Conor Gallagher,CM,78,England
+Tottenham Hotspur,Lucas Bergvall,CM,78,Sweden
+Tottenham Hotspur,Mathys Tel,LM,78,France
+Tottenham Hotspur,Richarlison,ST,78,Brazil
+Tottenham Hotspur,Wilson Odobert,LM,78,France
+Tottenham Hotspur,Antonín Kinský,GK,77,Czech Republic
+Tottenham Hotspur,Archie Gray,CDM,77,England
+Tottenham Hotspur,Martin Dúbravka,GK,77,Slovakia
+Tottenham Hotspur,Tosin Adarabioyo,CB,77,England
+Tottenham Hotspur,Mykhailo Mudryk,LM,75,Ukraine
+Tottenham Hotspur,Ben Davies,CB,74,Wales
+Tottenham Hotspur,Mikey Moore,LW,74,England
+Tottenham Hotspur,Kota Takai,CB,72,Japan
+Tottenham Hotspur,Souza,LB,70,Brazil
+Tottenham Hotspur,Brandon Austin,GK,67,England
+Tottenham Hotspur,Jamie Donley,CAM,67,Northern Ireland
+Tottenham Hotspur,George Abbott,CM,66,England
+Tottenham Hotspur,Dane Scarlett,ST,65,England
+Tottenham Hotspur,Oliver Irow,LM,64,England
+Tottenham Hotspur,Tyrese Hall,CAM,64,Jamaica
+Tottenham Hotspur,Alfie Dorrington,CB,62,England
+Tottenham Hotspur,Callum Olusesi,CM,62,England
+Tottenham Hotspur,Jun'ai Byfield,CB,62,England
 Aston Villa,Boubacar Kamara,CDM,84,France
 Aston Villa,John McGinn,RM,83,Scotland
 Aston Villa,Ollie Watkins,ST,83,England
 Aston Villa,Amadou Onana,CDM,81,Belgium
+Aston Villa,Leon Goretzka,CDM,81,Germany
 Aston Villa,Matty Cash,RB,81,Poland
 Aston Villa,Pau Torres,CB,81,Spain
 Aston Villa,Emiliano Buendía,LM,80,Argentina
 Aston Villa,Johan Manzambi,CM,80,Switzerland
 Aston Villa,Ian Maatsen,LB,79,Netherlands
+Aston Villa,Nicolas Jackson,ST,79,Senegal
 Aston Villa,Aaron Wan-Bissaka,RB,78,DR Congo
 Aston Villa,João Gomes,CDM,78,Brazil
 Aston Villa,Matteo Ruggeri,LB,78,Italy
@@ -486,6 +473,7 @@ Aston Villa,Ross Barkley,CM,77,England
 Aston Villa,Tammy Abraham,ST,77,England
 Aston Villa,Tyrone Mings,CB,77,England
 Aston Villa,Victor Lindelöf,CB,77,Sweden
+Aston Villa,Ibrahim Mbaye,RW,76,Senegal
 Aston Villa,Zion Suzuki,GK,76,Japan
 Aston Villa,Lamare Bogarde,CDM,74,Netherlands
 Aston Villa,Alysson,RM,70,Brazil
@@ -499,46 +487,21 @@ Aston Villa,Triston Rowe,RB,65,England
 Aston Villa,Josh Feeney,CB,64,England
 Aston Villa,Ben Broggio,RM,63,England
 Aston Villa,Aidan Borland,CM,59,Scotland
-Inter Miami,Lionel Messi,CAM,89,Argentina
-Inter Miami,Casemiro,CDM,83,Brazil
-Inter Miami,Rodrigo De Paul,CM,83,Argentina
-Inter Miami,Luis Suárez,ST,78,Uruguay
-Inter Miami,Germán Berterame,ST,77,Mexico
-Inter Miami,Dayne St. Clair,GK,73,Canada
-Inter Miami,Reguilón,LB,72,Spain
-Inter Miami,Facundo Mura,RB,71,Argentina
-Inter Miami,Tadeo Allende,RM,71,Argentina
-Inter Miami,Telasco Segovia,CM,71,Venezuela
-Inter Miami,Yannick Bright,CDM,71,Italy
-Inter Miami,Micael,CB,69,Brazil
-Inter Miami,David Ayala,CDM,68,Argentina
-Inter Miami,Gonzalo Luján,CB,68,Argentina
-Inter Miami,Maximiliano Falcón,CB,68,Uruguay
-Inter Miami,Noah Allen,LB,68,Greece
-Inter Miami,Ian Fray,RB,66,Jamaica
-Inter Miami,Mateo Silvetti,RM,65,Argentina
-Inter Miami,Luis Barraza,GK,64,United States
-Inter Miami,Rocco Ríos Novo,GK,63,Argentina
-Inter Miami,David Ruíz,CM,62,Honduras
-Inter Miami,Dániel Pintér,LW,59,United States
-Inter Miami,Fricio Caicedo,CB,58,Ecuador
-Inter Miami,Santiago Morales,CAM,58,United States
-Inter Miami,Israel Boatwright,RB,55,Dominican Republic
-Inter Miami,Tyler Hall,CB,55,United States
 Newcastle United,Lewis Hall,LB,83,England
 Newcastle United,Fabian Schär,CB,81,Switzerland
 Newcastle United,Malick Thiaw,CB,81,Germany
+Newcastle United,Nico González,CDM,81,Spain
 Newcastle United,Sven Botman,CB,81,Netherlands
 Newcastle United,Tino Livramento,RB,81,England
 Newcastle United,Harvey Barnes,LW,80,England
 Newcastle United,Joelinton,CM,80,Brazil
-Newcastle United,Nick Woltemade,ST,80,Germany
 Newcastle United,Yoane Wissa,ST,80,DR Congo
 Newcastle United,Anthony Elanga,RW,79,Sweden
 Newcastle United,Dan Burn,CB,79,England
 Newcastle United,Jacob Murphy,RW,79,England
 Newcastle United,Bazoumana Touré,LW,78,Côte d'Ivoire
 Newcastle United,Jacob Ramsey,CM,78,England
+Newcastle United,Matias Fernandez-Pardo,ST,78,Belgium
 Newcastle United,Nick Pope,GK,78,England
 Newcastle United,Lewis Miley,CM,77,England
 Newcastle United,Lukáš Horníček,GK,77,Czech Republic
@@ -553,6 +516,42 @@ Newcastle United,Park Seung Soo,LW,62,South Korea
 Newcastle United,Leo Shahar,RB,60,England
 Newcastle United,Aidan Harris,GK,59,England
 Newcastle United,Sean Neave,ST,59,England
+Brighton and Hove Albion,Bart Verbruggen,GK,81,Netherlands
+Brighton and Hove Albion,Kaoru Mitoma,LM,81,Japan
+Brighton and Hove Albion,Luka Vušković,CB,81,Croatia
+Brighton and Hove Albion,Ferdi Kadıoğlu,LB,80,Turkey
+Brighton and Hove Albion,Yankuba Minteh,RM,80,Gambia
+Brighton and Hove Albion,Mats Wieffer,RB,79,Netherlands
+Brighton and Hove Albion,Pascal Groß,CDM,79,Germany
+Brighton and Hove Albion,Yasin Ayari,CDM,79,Sweden
+Brighton and Hove Albion,Diego Gómez,CM,78,Paraguay
+Brighton and Hove Albion,Maxim De Cuyper,LB,78,Belgium
+Brighton and Hove Albion,Olivier Boscagli,CB,78,France
+Brighton and Hove Albion,Georginio Rutter,CAM,77,France
+Brighton and Hove Albion,Jack Hinshelwood,CDM,77,England
+Brighton and Hove Albion,Lewis Dunk,CB,77,England
+Brighton and Hove Albion,Matt O'Riley,CAM,77,Denmark
+Brighton and Hove Albion,Pascal Struijk,CB,76,Netherlands
+Brighton and Hove Albion,Promise David,ST,76,Canada
+Brighton and Hove Albion,Costinha,RB,75,Portugal
+Brighton and Hove Albion,Femi Azeez,RM,75,Nigeria
+Brighton and Hove Albion,Igor Julio,CB,75,Brazil
+Brighton and Hove Albion,Chema Andrés,CDM,74,Spain
+Brighton and Hove Albion,Evan Ferguson,ST,74,Republic of Ireland
+Brighton and Hove Albion,Charalampos Kostoulas,ST,73,Greece
+Brighton and Hove Albion,Jason Steele,GK,73,England
+Brighton and Hove Albion,Stefanos Tzimas,ST,73,Greece
+Brighton and Hove Albion,Ibrahim Osman,LM,72,Ghana
+Brighton and Hove Albion,Michael Svoboda,CB,72,Austria
+Brighton and Hove Albion,Eíran Cashin,CB,71,Republic of Ireland
+Brighton and Hove Albion,Malick Yalcouyé,CM,70,Côte d'Ivoire
+Brighton and Hove Albion,Amario Cozier-Duberry,RM,69,England
+Brighton and Hove Albion,Jaouen Hadjam,LB,69,Algeria
+Brighton and Hove Albion,Zadok Yohanna,RM,67,Nigeria
+Brighton and Hove Albion,Kamari Doyle,CAM,65,England
+Brighton and Hove Albion,Mark O'Mahony,ST,63,Republic of Ireland
+Brighton and Hove Albion,Caylan Vickers,ST,62,England
+Brighton and Hove Albion,Tom McGill,GK,62,Canada
 Al-Nassr,Cristiano Ronaldo,ST,84,Portugal
 Al-Nassr,Iñigo Martínez,CB,83,Spain
 Al-Nassr,João Félix,CAM,83,Portugal
@@ -583,37 +582,29 @@ Al-Nassr,Saad Haqawi,ST,55,Saudi Arabia
 Al-Nassr,Rakan Al Ghamdi,CAM,54,Saudi Arabia
 Al-Nassr,Bassam Hazazi,CM,51,Saudi Arabia
 Al-Nassr,Mubarak Al Buainain,GK,51,Saudi Arabia
-Brighton and Hove Albion,Bart Verbruggen,GK,81,Netherlands
-Brighton and Hove Albion,Kaoru Mitoma,LM,81,Japan
-Brighton and Hove Albion,Luka Vušković,CB,81,Croatia
-Brighton and Hove Albion,Carlos Baleba,CDM,80,Cameroon
-Brighton and Hove Albion,Ferdi Kadıoğlu,LB,80,Turkey
-Brighton and Hove Albion,Yankuba Minteh,RM,80,Gambia
-Brighton and Hove Albion,Mats Wieffer,RB,79,Netherlands
-Brighton and Hove Albion,Pascal Groß,CDM,79,Germany
-Brighton and Hove Albion,Yasin Ayari,CDM,79,Sweden
-Brighton and Hove Albion,Diego Gómez,CM,78,Paraguay
-Brighton and Hove Albion,Maxim De Cuyper,LB,78,Belgium
-Brighton and Hove Albion,Olivier Boscagli,CB,78,France
-Brighton and Hove Albion,Georginio Rutter,CAM,77,France
-Brighton and Hove Albion,Jack Hinshelwood,CDM,77,England
-Brighton and Hove Albion,Lewis Dunk,CB,77,England
-Brighton and Hove Albion,Matt O'Riley,CAM,77,Denmark
-Brighton and Hove Albion,Pascal Struijk,CB,76,Netherlands
-Brighton and Hove Albion,Promise David,ST,76,Canada
-Brighton and Hove Albion,Costinha,RB,75,Portugal
-Brighton and Hove Albion,Igor Julio,CB,75,Brazil
-Brighton and Hove Albion,Evan Ferguson,ST,74,Republic of Ireland
-Brighton and Hove Albion,Charalampos Kostoulas,ST,73,Greece
-Brighton and Hove Albion,Jason Steele,GK,73,England
-Brighton and Hove Albion,Stefanos Tzimas,ST,73,Greece
-Brighton and Hove Albion,Ibrahim Osman,LM,72,Ghana
-Brighton and Hove Albion,Michael Svoboda,CB,72,Austria
-Brighton and Hove Albion,Eíran Cashin,CB,71,Republic of Ireland
-Brighton and Hove Albion,Malick Yalcouyé,CM,70,Côte d'Ivoire
-Brighton and Hove Albion,Amario Cozier-Duberry,RM,69,England
-Brighton and Hove Albion,Zadok Yohanna,RM,67,Nigeria
-Brighton and Hove Albion,Kamari Doyle,CAM,65,England
-Brighton and Hove Albion,Mark O'Mahony,ST,63,Republic of Ireland
-Brighton and Hove Albion,Caylan Vickers,ST,62,England
-Brighton and Hove Albion,Tom McGill,GK,62,Canada
+Inter Miami,Lionel Messi,CAM,89,Argentina
+Inter Miami,Casemiro,CDM,83,Brazil
+Inter Miami,Rodrigo De Paul,CM,83,Argentina
+Inter Miami,Luis Suárez,ST,78,Uruguay
+Inter Miami,Germán Berterame,ST,77,Mexico
+Inter Miami,Dayne St. Clair,GK,73,Canada
+Inter Miami,Reguilón,LB,72,Spain
+Inter Miami,Facundo Mura,RB,71,Argentina
+Inter Miami,Tadeo Allende,RM,71,Argentina
+Inter Miami,Telasco Segovia,CM,71,Venezuela
+Inter Miami,Yannick Bright,CDM,71,Italy
+Inter Miami,Micael,CB,69,Brazil
+Inter Miami,David Ayala,CDM,68,Argentina
+Inter Miami,Gonzalo Luján,CB,68,Argentina
+Inter Miami,Maximiliano Falcón,CB,68,Uruguay
+Inter Miami,Noah Allen,LB,68,Greece
+Inter Miami,Ian Fray,RB,66,Jamaica
+Inter Miami,Mateo Silvetti,RM,65,Argentina
+Inter Miami,Luis Barraza,GK,64,United States
+Inter Miami,Rocco Ríos Novo,GK,63,Argentina
+Inter Miami,David Ruíz,CM,62,Honduras
+Inter Miami,Dániel Pintér,LW,59,United States
+Inter Miami,Fricio Caicedo,CB,58,Ecuador
+Inter Miami,Santiago Morales,CAM,58,United States
+Inter Miami,Israel Boatwright,RB,55,Dominican Republic
+Inter Miami,Tyler Hall,CB,55,United States

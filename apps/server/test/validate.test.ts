@@ -31,8 +31,8 @@ describe('validateDataset', () => {
     expect(codes(makeDataset())).toEqual({ ok: true, errors: [], warnings: [] });
   });
 
-  it('expects 618 players by default', () => {
-    expect(DATA_RULES.expectedPlayerCount).toBe(618);
+  it('expects 609 players by default', () => {
+    expect(DATA_RULES.expectedPlayerCount).toBe(609);
     expect(errorsOf(makeDataset(), DATA_RULES)).toContain('player-count');
   });
 
