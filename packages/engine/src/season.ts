@@ -143,6 +143,33 @@ export function withForm<T extends { id: string; rating: TeamRating }>(teams: re
   });
 }
 
+/** How much of a team's streak carries over from one matchday to the next. */
+export const STREAK_MEMORY = 0.85;
+
+/**
+ * A team's streak for every matchday (index 0 = matchday 1): a seeded AR(1) walk whose spread
+ * stays at `size` rating points all season.
+ */
+export function streakSeries(seed: number, teamId: string, matchdays: number, size: number): number[] {
+  if (!(size > 0)) return Array.from({ length: matchdays }, () => 0);
+  const rng = deriveRng(seed, 'streak', teamId);
+  const fresh = Math.sqrt(1 - STREAK_MEMORY * STREAK_MEMORY);
+  const out: number[] = [];
+  let level = size * rng.normal();
+  for (let i = 0; i < matchdays; i++) {
+    if (i > 0) level = STREAK_MEMORY * level + fresh * size * rng.normal();
+    out.push(level);
+  }
+  return out;
+}
+
+function shiftRating(rating: TeamRating, by: number): TeamRating {
+  if (by === 0) return rating;
+  const attack = round2(rating.attack + by);
+  const defense = round2(rating.defense + by);
+  return { ...rating, attack, defense, strength: round2((attack + defense) / 2) };
+}
+
 function statKey(teamId: string, slotKey: string, playerId: number | null): string {
   return playerId === null ? `r:${teamId}:${slotKey}` : `p${playerId}@${teamId}`;
 }
@@ -219,7 +246,15 @@ export function simulateSeason(inputs: readonly SeasonTeamInput[], options: Seas
   const fixtures: PlayedFixture[] = [];
   const standings: StandingRow[][] = [];
   const summary: SeasonSummary = { matches: 0, goals: 0, homeWins: 0, draws: 0, awayWins: 0 };
-  const lastMatchday = Math.min(options.lastMatchday ?? Number.POSITIVE_INFINITY, schedule.reduce((m, f) => Math.max(m, f.matchday), 0));
+  const totalMatchdays = schedule.reduce((m, f) => Math.max(m, f.matchday), 0);
+  const lastMatchday = Math.min(options.lastMatchday ?? Number.POSITIVE_INFINITY, totalMatchdays);
+  // Always the whole season's series, so a half-season run and the full replay agree.
+  const streaks = new Map<string, number[]>();
+  const streakOf = (teamId: string) => {
+    let series = streaks.get(teamId);
+    if (!series) streaks.set(teamId, (series = streakSeries(seed, teamId, totalMatchdays, params.streaks)));
+    return series;
+  };
 
   for (let md = 1; md <= lastMatchday; md++) {
     const byId = md >= changeFrom ? laterById : firstById;
@@ -229,11 +264,13 @@ export function simulateSeason(inputs: readonly SeasonTeamInput[], options: Seas
       const away = byId.get(f.awayTeamId)!;
       const homeSide = currentSide(home);
       const awaySide = currentSide(away);
+      const homeRating = shiftRating(homeSide.rating, streakOf(home.id)[md - 1] ?? 0);
+      const awayRating = shiftRating(awaySide.rating, streakOf(away.id)[md - 1] ?? 0);
       const matchKey = `${md}:${home.id}:${away.id}`;
 
       const score = simulateScore(
-        homeSide.rating,
-        awaySide.rating,
+        homeRating,
+        awayRating,
         league,
         params,
         deriveRng(seed, 'score', md, home.id, away.id),

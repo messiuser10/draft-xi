@@ -59,7 +59,10 @@ export function simulateScore(
     Math.min(XG_MAX, Math.max(XG_MIN, base * Math.exp(sigma * rng.normal())));
   const lambdaHome = noisy(xg.home);
   const lambdaAway = noisy(xg.away);
-  return { homeGoals: rng.poisson(lambdaHome), awayGoals: rng.poisson(lambdaAway) };
+  const shared = Math.min(Math.max(0, params.sharedGoals), lambdaHome - 0.05, lambdaAway - 0.05);
+  if (!(shared > 0)) return { homeGoals: rng.poisson(lambdaHome), awayGoals: rng.poisson(lambdaAway) };
+  const both = rng.poisson(shared);
+  return { homeGoals: rng.poisson(lambdaHome - shared) + both, awayGoals: rng.poisson(lambdaAway - shared) + both };
 }
 
 export type MatchEventType = 'goal' | 'assist' | 'yellow' | 'red';

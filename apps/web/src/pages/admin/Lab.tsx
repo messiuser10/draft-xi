@@ -12,6 +12,8 @@ const PARAMS = [
   ['aiSpread', 'AI spread', 0.05],
   ['aiCatchUp', 'AI catch-up', 0.05],
   ['form', 'Season form', 0.25],
+  ['streaks', 'Streaks', 0.25],
+  ['sharedGoals', 'Shared goals (draws)', 0.05],
 ] as const;
 
 export function AdminLabPage() {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { catchUpAi, monteCarlo, rateTeams, resolveParams, withForm } from '../src';
+import { catchUpAi, monteCarlo, rateTeams, resolveParams, STREAK_MEMORY, streakSeries, withForm } from '../src';
 import { makeLeague } from './helpers/data';
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
@@ -70,5 +70,34 @@ describe('season form', () => {
     const withForm2 = best(2);
     expect(withForm2).toBeLessThan(without - 0.1);
     expect(withForm2).toBeGreaterThan(0.25);
+  });
+});
+
+describe('in-season streaks', () => {
+  it('drift around zero with the chosen spread and carry over between matchdays', () => {
+    const all = Array.from({ length: 400 }, (_, seed) => streakSeries(seed, 'h:1', 38, 1.5));
+    expect(streakSeries(7, 'h:1', 38, 1.5)).toEqual(all[7]);
+    expect(streakSeries(7, 'h:2', 38, 1.5)).not.toEqual(all[7]);
+    const values = all.flat();
+    const sd = Math.sqrt(values.reduce((s, x) => s + x * x, 0) / values.length);
+    expect(sd).toBeGreaterThan(1.35);
+    expect(sd).toBeLessThan(1.65);
+    const pairs = all.flatMap((series) => series.slice(1).map((x, i) => x * series[i]!));
+    const corr = pairs.reduce((s, x) => s + x, 0) / pairs.length / (sd * sd);
+    expect(corr).toBeGreaterThan(STREAK_MEMORY - 0.07);
+    expect(corr).toBeLessThan(STREAK_MEMORY + 0.07);
+    expect(streakSeries(7, 'h:1', 38, 0)).toEqual(Array.from({ length: 38 }, () => 0));
+  });
+});
+
+describe('shared goals', () => {
+  it('makes draws likelier without changing the goal average much', () => {
+    const { teams: league } = makeLeague(3, 2);
+    const run = (sharedGoals: number) => monteCarlo(league, { seed: 3, runs: 120, params: { sharedGoals } });
+    const off = run(0);
+    const on = run(0.3);
+    const draws = (r: typeof on) => 1 - r.homeWinRate - r.awayWinRate;
+    expect(draws(on)).toBeGreaterThan(draws(off) + 0.015);
+    expect(Math.abs(on.goalsPerMatch - off.goalsPerMatch)).toBeLessThan(0.1);
   });
 });

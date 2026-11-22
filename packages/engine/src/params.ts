@@ -31,20 +31,33 @@ export interface SimParams {
    * not a certainty. 0 turns it off.
    */
   form: number;
+  /**
+   * In-season streaks, in rating points: on top of season form, each team's level drifts from
+   * matchday to matchday (standard deviation = this, each matchday keeping STREAK_MEMORY of the
+   * last), giving hot and cold runs of several weeks. 0 turns it off.
+   */
+  streaks: number;
+  /**
+   * Expected goals shared by both sides (a bivariate Poisson term). It keeps the goal average and
+   * win odds roughly the same but makes level scores likelier, matching real draw rates
+   * (about 25%). 0 turns it off.
+   */
+  sharedGoals: number;
 }
 
 export const TIEBREAK_KEYS = ['goalDifference', 'goalsFor', 'headToHead', 'wins'] as const;
 export type TiebreakKey = (typeof TIEBREAK_KEYS)[number];
 
 /**
- * Spec defaults, except baseGoals (1.35 -> 1.25) and sensitivity (0.05 -> 0.09), tuned so a
- * 3-human league gives champions around 87 points, bottom teams around 28 and about 2.75 goals
- * per match (M1 realism targets). See DECISIONS.md.
+ * Tuned to real top-flight leagues (see DECISIONS.md): champion about 85 points, bottom team
+ * about 22, 2.8 goals per match, 45% home wins and 25% draws; a top-5 side loses about 15% of
+ * its matches against a bottom-5 side. Spec defaults were baseGoals 1.35, homeAdvantage 1.10,
+ * sensitivity 0.05.
  */
 export const DEFAULT_SIM_PARAMS: Readonly<SimParams> = {
-  baseGoals: 1.25,
-  homeAdvantage: 1.1,
-  sensitivity: 0.09,
+  baseGoals: 1.15,
+  homeAdvantage: 1.3,
+  sensitivity: 0.07,
   chaos: 0.5,
   outOfPositionPenalty: 8,
   reserveRating: 62,
@@ -55,6 +68,8 @@ export const DEFAULT_SIM_PARAMS: Readonly<SimParams> = {
   aiSpread: 1,
   aiCatchUp: 0,
   form: 2,
+  streaks: 1.5,
+  sharedGoals: 0.3,
 };
 
 export function resolveParams(overrides: Partial<SimParams> = {}): SimParams {

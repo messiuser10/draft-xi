@@ -66,6 +66,8 @@ const SETTINGS = {
       aiSpread: z.number().min(0).max(1).optional(),
       aiCatchUp: z.number().min(0).max(1).optional(),
       form: z.number().min(0).max(6).optional(),
+      streaks: z.number().min(0).max(6).optional(),
+      sharedGoals: z.number().min(0).max(1).optional(),
     }),
     default: DEFAULT_SIM_PARAMS,
   },
@@ -153,5 +155,43 @@ export async function ensureAppSettings(database: Database): Promise<number> {
       .values(missing.map((key) => ({ key, value: settingDefault(key) })))
       .onConflictDoNothing();
   }
+  await upgradeSimulationTuning(database);
   return missing.length;
+}
+
+/** Bump when a retune should replace stored values that still equal the previous defaults. */
+export const SIM_TUNING_VERSION = 2;
+const SIM_TUNING_KEY = 'simulation.tuningVersion';
+/** Version 2 (realistic retune): earlier default -> new default. */
+const SIM_RETUNE: Record<string, [old: number, next: number]> = {
+  baseGoals: [1.25, DEFAULT_SIM_PARAMS.baseGoals],
+  homeAdvantage: [1.1, DEFAULT_SIM_PARAMS.homeAdvantage],
+  sensitivity: [0.09, DEFAULT_SIM_PARAMS.sensitivity],
+  aiSpread: [0.4, DEFAULT_SIM_PARAMS.aiSpread],
+  aiCatchUp: [0.8, DEFAULT_SIM_PARAMS.aiCatchUp],
+};
+
+/**
+ * One-time upgrade of the stored simulation parameters: values still at the old defaults move to
+ * the new ones; anything an admin changed is kept. Runs once per tuning version.
+ */
+export async function upgradeSimulationTuning(database: Database): Promise<boolean> {
+  const { db, t } = database;
+  const [version] = await db.select().from(t.appSettings).where(eq(t.appSettings.key, SIM_TUNING_KEY)).limit(1);
+  if (typeof version?.value === 'number' && version.value >= SIM_TUNING_VERSION) return false;
+  const stored = await getSetting(database, 'simulation.parameters');
+  const next: Record<string, unknown> = { ...stored };
+  let changed = false;
+  for (const [key, [old, value]] of Object.entries(SIM_RETUNE)) {
+    if (next[key] === old) {
+      next[key] = value;
+      changed = true;
+    }
+  }
+  if (changed) await setSetting(database, 'simulation.parameters', next as SettingValue<'simulation.parameters'>);
+  await db
+    .insert(t.appSettings)
+    .values({ key: SIM_TUNING_KEY, value: SIM_TUNING_VERSION })
+    .onConflictDoUpdate({ target: t.appSettings.key, set: { value: SIM_TUNING_VERSION } });
+  return changed;
 }

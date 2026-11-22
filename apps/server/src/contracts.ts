@@ -945,6 +945,8 @@ export const labRunSchema = z.object({
       aiSpread: z.number().min(0).max(1),
       aiCatchUp: z.number().min(0).max(1),
       form: z.number().min(0).max(6),
+      streaks: z.number().min(0).max(6),
+      sharedGoals: z.number().min(0).max(1),
       outOfPositionPenalty: z.number().min(0).max(40),
       reserveRating: z.number().int().min(40).max(99),
       chemistry: z.boolean(),

@@ -54,6 +54,15 @@ describe('realism for a 3-human league (M1 tuning targets)', () => {
     expect(goals).toBeLessThanOrEqual(2.9);
     expect(avg((r) => r.homeWinRate)).toBeGreaterThan(avg((r) => r.awayWinRate));
   });
+
+  it('about 45% home wins and 25% draws, like real top flights', () => {
+    const home = avg((r) => r.homeWinRate);
+    const draws = avg((r) => 1 - r.homeWinRate - r.awayWinRate);
+    expect(home).toBeGreaterThan(0.42);
+    expect(home).toBeLessThan(0.48);
+    expect(draws).toBeGreaterThan(0.22);
+    expect(draws).toBeLessThan(0.28);
+  });
 });
 
 describe('simulateMultiSeason', () => {

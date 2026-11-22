@@ -175,6 +175,8 @@ function SimParams({ value, onChange }: { value: Values; onChange: (v: Values) =
         {num('aiSpread', 'AI club spread (0 to 1, 1 = off)', 0.05, 1)}
         {num('aiCatchUp', 'AI catch-up to drafted teams (0 to 1, 0 = off)', 0.05, 0)}
         {num('form', 'Season form swing (rating points)', 0.25, 2)}
+        {num('streaks', 'In-season streaks (rating points)', 0.25, 1.5)}
+        {num('sharedGoals', 'Shared goals (more draws)', 0.05, 0.3)}
       </div>
       <div className="flex flex-wrap gap-4 text-sm">
         <label className="flex items-center gap-1">
