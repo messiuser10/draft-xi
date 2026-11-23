@@ -40,7 +40,19 @@ describe.each(DIALECTS)('simulation tuning upgrade on %s', (_name, open) => {
   it('keeps values an admin changed and old AI tweaks only move off their old defaults', async () => {
     await store({ ...OLD, sensitivity: 0.1, homeAdvantage: 1.2, aiSpread: 0.4, aiCatchUp: 0.5 });
     expect(await upgradeSimulationTuning(database)).toBe(true);
-    expect(await getSetting(database, 'simulation.parameters')).toMatchObject({ sensitivity: 0.1, homeAdvantage: 1.2, baseGoals: DEFAULT_SIM_PARAMS.baseGoals, aiSpread: 1, aiCatchUp: 0.5 });
+    expect(await getSetting(database, 'simulation.parameters')).toMatchObject({ sensitivity: 0.1, homeAdvantage: 1.2, baseGoals: DEFAULT_SIM_PARAMS.baseGoals, aiSpread: DEFAULT_SIM_PARAMS.aiSpread, aiCatchUp: 0.5 });
+  });
+
+  it('also moves values left at the previous retune (version 2) defaults', async () => {
+    await store({ ...OLD, baseGoals: 1.15, homeAdvantage: 1.3, sensitivity: 0.07, aiSpread: 1, form: 2, streaks: 1.5, sharedGoals: 0.3 });
+    expect(await upgradeSimulationTuning(database)).toBe(true);
+    expect(await getSetting(database, 'simulation.parameters')).toMatchObject({
+      sensitivity: DEFAULT_SIM_PARAMS.sensitivity,
+      aiSpread: DEFAULT_SIM_PARAMS.aiSpread,
+      form: DEFAULT_SIM_PARAMS.form,
+      streaks: DEFAULT_SIM_PARAMS.streaks,
+      sharedGoals: 0.3,
+    });
   });
 
   it('does nothing to a fresh database beyond recording the version', async () => {

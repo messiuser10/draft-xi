@@ -217,3 +217,11 @@ Choices the spec leaves open, one line each, newest at the bottom of each sectio
   - Before the retune: draws 21%, home wins 42%, and a clearly best team won about 50%.
 - Shared goals: both sides get Poisson(shared) goals added and their own expected goals reduced by the same amount. This is the standard bivariate Poisson fix for too few draws in independent-Poisson models.
 - Stored simulation parameters still at the old defaults (1.25, 1.1, 0.09, aiSpread 0.4, aiCatchUp 0.8) are moved to the new defaults once on boot. The version is kept in `app_settings` under `simulation.tuningVersion`, so an admin who picks an old value later keeps it.
+- "Balanced" difficulty (simulation tuning version 3), chosen by the owner after "too hard to win":
+  - Changes: aiSpread 0.5, sensitivity 0.08, form 1.25, streaks 1. The rest of version 2 stays.
+  - Solo good draft: title 18% → 46%, top four 59% → 81%.
+  - Solo casual draft: title 5% → 13%, top four 24% → 40%.
+  - Two good drafts: one of them wins 42% → 72%.
+  - League: champion 79 points, bottom team 27, 2.74 goals per match, 45% home wins, 27% draws.
+- Less randomness alone barely helped: a decent solo draft ranked 2nd to 10th behind PSG, Real and Bayern. The fix was to weaken the super-clubs.
+- The tuning upgrade now maps every earlier default (version 1 or 2) of each tuned key to the current one.

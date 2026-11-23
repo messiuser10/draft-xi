@@ -122,22 +122,25 @@ enough to update the live database; admin edits survive ordinary restarts.
 | --- | --- | --- |
 | base_goals | 1.15 | Spec suggested 1.35 |
 | home_advantage | 1.30 | Spec suggested 1.10; with shared goals this gives about 45% home wins |
-| sensitivity | 0.07 | Spec suggested 0.05 |
+| sensitivity | 0.08 | Spec suggested 0.05 |
 | chaos | 0.5 | Per-match noise |
-| form | 2 | Season form: one seeded swing per team, in rating points |
-| streaks | 1.5 | In-season hot and cold runs, in rating points |
+| form | 1.25 | Season form: one seeded swing per team, in rating points |
+| streaks | 1 | In-season hot and cold runs, in rating points |
 | shared_goals | 0.3 | Bivariate Poisson term that brings draws up to about 25% |
-| ai_spread / ai_catch_up | 1 / 0 | Off: every team plays by the same rules |
+| ai_spread | 0.5 | AI clubs pulled halfway to the AI average, so super-clubs don't block good drafts |
+| ai_catch_up | 0 | Off |
 | out_of_position_penalty | 8 | |
 | chemistry | on | |
 | injuries | off | |
 | points | 3, 1, 0 | |
 
 With these, leagues look like real top flights:
-- About 85 points for the champion and 22 for the bottom team.
-- About 2.8 goals per match, with 45% home wins and 25% draws.
-- When a top-5 side plays a bottom-5 side, the underdog wins about 15% of the time and draws about 20%.
-- The pre-season favourite wins the title roughly 25% to 45% of the time.
+- About 80 points for the champion and 27 for the bottom team.
+- About 2.75 goals per match, with 45% home wins and about 27% draws.
+
+And drafting pays off:
+- A well-drafted solo team wins the league about 45% of the time and makes the top four about 80%.
+- A casual draft wins about 13% of the time and makes the top four about 40%.
 
 See the realism tests in `packages/engine/test/montecarlo.test.ts`. On boot, a stored parameter that still holds the previous default is moved to the new one, once (`simulation.tuningVersion`). Values an admin changed are kept.
 

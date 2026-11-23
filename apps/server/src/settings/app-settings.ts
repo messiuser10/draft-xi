@@ -159,16 +159,18 @@ export async function ensureAppSettings(database: Database): Promise<number> {
   return missing.length;
 }
 
-/** Bump when a retune should replace stored values that still equal the previous defaults. */
-export const SIM_TUNING_VERSION = 2;
+/** Bump when a retune should replace stored values that still equal earlier defaults. */
+export const SIM_TUNING_VERSION = 3;
 const SIM_TUNING_KEY = 'simulation.tuningVersion';
-/** Version 2 (realistic retune): earlier default -> new default. */
-const SIM_RETUNE: Record<string, [old: number, next: number]> = {
-  baseGoals: [1.25, DEFAULT_SIM_PARAMS.baseGoals],
-  homeAdvantage: [1.1, DEFAULT_SIM_PARAMS.homeAdvantage],
-  sensitivity: [0.09, DEFAULT_SIM_PARAMS.sensitivity],
-  aiSpread: [0.4, DEFAULT_SIM_PARAMS.aiSpread],
-  aiCatchUp: [0.8, DEFAULT_SIM_PARAMS.aiCatchUp],
+/** Every earlier default of each tuned key -> the current default. */
+const SIM_RETUNE: Record<string, [earlier: number[], next: number]> = {
+  baseGoals: [[1.25], DEFAULT_SIM_PARAMS.baseGoals],
+  homeAdvantage: [[1.1], DEFAULT_SIM_PARAMS.homeAdvantage],
+  sensitivity: [[0.09, 0.07], DEFAULT_SIM_PARAMS.sensitivity],
+  aiSpread: [[0.4, 1], DEFAULT_SIM_PARAMS.aiSpread],
+  aiCatchUp: [[0.8], DEFAULT_SIM_PARAMS.aiCatchUp],
+  form: [[2], DEFAULT_SIM_PARAMS.form],
+  streaks: [[1.5], DEFAULT_SIM_PARAMS.streaks],
 };
 
 /**
@@ -182,8 +184,8 @@ export async function upgradeSimulationTuning(database: Database): Promise<boole
   const stored = await getSetting(database, 'simulation.parameters');
   const next: Record<string, unknown> = { ...stored };
   let changed = false;
-  for (const [key, [old, value]] of Object.entries(SIM_RETUNE)) {
-    if (next[key] === old) {
+  for (const [key, [earlier, value]] of Object.entries(SIM_RETUNE)) {
+    if (typeof next[key] === 'number' && earlier.includes(next[key]) && next[key] !== value) {
       next[key] = value;
       changed = true;
     }

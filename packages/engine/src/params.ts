@@ -14,8 +14,9 @@ export interface SimParams {
   /** Order of tiebreakers after points; a seeded draw always settles what is left. */
   tiebreakers: TiebreakKey[];
   /**
-   * 0 to 1. How far apart AI clubs play: 1 (default, off) keeps their real-data ratings, lower
-   * pulls each AI club's attack and defense towards the AI average. Human teams are never changed.
+   * 0 to 1. How far apart AI clubs play: 1 keeps their real-data ratings, lower pulls each AI
+   * club's attack and defense towards the AI average, so super-clubs like PSG are less dominant
+   * and drafted teams can win. Human teams are never changed.
    */
   aiSpread: number;
   /**
@@ -49,15 +50,16 @@ export const TIEBREAK_KEYS = ['goalDifference', 'goalsFor', 'headToHead', 'wins'
 export type TiebreakKey = (typeof TIEBREAK_KEYS)[number];
 
 /**
- * Tuned to real top-flight leagues (see DECISIONS.md): champion about 85 points, bottom team
- * about 22, 2.8 goals per match, 45% home wins and 25% draws; a top-5 side loses about 15% of
- * its matches against a bottom-5 side. Spec defaults were baseGoals 1.35, homeAdvantage 1.10,
+ * Tuned to real top-flight leagues (see DECISIONS.md): champion about 80 points, bottom team
+ * about 27, 2.75 goals per match, 45% home wins and about 27% draws. AI clubs are pulled halfway
+ * to the AI average (aiSpread 0.5), so a well-drafted team wins the league about 45% of the time
+ * and makes the top four about 80%. Spec defaults were baseGoals 1.35, homeAdvantage 1.10,
  * sensitivity 0.05.
  */
 export const DEFAULT_SIM_PARAMS: Readonly<SimParams> = {
   baseGoals: 1.15,
   homeAdvantage: 1.3,
-  sensitivity: 0.07,
+  sensitivity: 0.08,
   chaos: 0.5,
   outOfPositionPenalty: 8,
   reserveRating: 62,
@@ -65,10 +67,10 @@ export const DEFAULT_SIM_PARAMS: Readonly<SimParams> = {
   injuries: false,
   points: { win: 3, draw: 1, loss: 0 },
   tiebreakers: ['goalDifference', 'goalsFor', 'headToHead'],
-  aiSpread: 1,
+  aiSpread: 0.5,
   aiCatchUp: 0,
-  form: 2,
-  streaks: 1.5,
+  form: 1.25,
+  streaks: 1,
   sharedGoals: 0.3,
 };
 

@@ -32,9 +32,9 @@ describe('AI catch-up', () => {
     expect(catchUpAi(weak, 1)).toEqual(weak);
   });
 
-  it('is off by default, so every team plays by the same rules', () => {
+  it('is off by default', () => {
     const { teams: league } = makeLeague(3, 5);
-    expect(rateTeams(league, resolveParams())).toEqual(rateTeams(league, resolveParams({ aiCatchUp: 0, aiSpread: 1 })));
+    expect(rateTeams(league, resolveParams())).toEqual(rateTeams(league, resolveParams({ aiCatchUp: 0 })));
     const lifted = rateTeams(league, resolveParams({ aiCatchUp: 1 }));
     const ai = (list: typeof lifted) => list.filter((t) => t.kind === 'ai');
     expect(ai(lifted)[0]!.rating.strength).toBeGreaterThan(ai(rateTeams(league, resolveParams()))[0]!.rating.strength);
